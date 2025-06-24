@@ -1,0 +1,7 @@
+[
+    {
+        "name": "xbox",
+        "description": "Debug build using the NXDK Xbox toolchain",
+        "toolchainFile": "${env:NXDK_DIR}/share/toolchain-nxdk.cmake"
+    }
+]
