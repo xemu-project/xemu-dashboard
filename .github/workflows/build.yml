@@ -23,7 +23,7 @@ jobs:
         git clone --recursive https://github.com/XboxDev/nxdk.git
         eval $(nxdk/bin/activate -s)
         cd nxdk
-        make NXDK_ONLY=y
+        make NXDK_ONLY=y CFLAGS=-O2 CXXFLAGS=-O2
         make tools
         cd ..
 
@@ -31,7 +31,7 @@ jobs:
       run: |
         eval $(nxdk/bin/activate -s)
         mkdir build && cd build
-        cmake .. -DCMAKE_TOOLCHAIN_FILE=nxdk/share/toolchain-nxdk.cmake
+        cmake .. -DCMAKE_TOOLCHAIN_FILE=nxdk/share/toolchain-nxdk.cmake -DCMAKE_BUILD_TYPE=Release
         cmake --build .
         cd ..
 
