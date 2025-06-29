@@ -4,6 +4,9 @@ set(XBOX_ISO_DIR ${CMAKE_CURRENT_BINARY_DIR}/xiso)
 set(CMAKE_C_STANDARD 23)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
+include(PrebuildNXDK)
+
 project(xemu-dashboard C CXX ASM)
 
 if(NOT CMAKE_BUILD_TYPE)
