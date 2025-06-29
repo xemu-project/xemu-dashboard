@@ -44,6 +44,6 @@ void network_get_ip_address(char *ip_address_buffer, char buffer_length)
     } else if (dhcp_supplied_address(netif) == 0) {
         strncpy(ip_address_buffer, "Waiting for DHCP", buffer_length);
     } else {
-        ip4addr_ntoa_r(netif_ip4_addr(netif), ip_address_buffer, buffer_length);
+        strncpy(ip_address_buffer, "Active", buffer_length);
     }
 }

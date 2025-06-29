@@ -185,7 +185,7 @@ int main(void)
         text_draw(body_text_cdata, body_text, footer_text, WINDOW_WIDTH - X_MARGIN - text_calculate_width(body_text_cdata, footer_text),
                   WINDOW_HEIGHT - Y_MARGIN - (int)BODY_FONT_SIZE, &text_color);
         network_get_ip_address(ip_address, sizeof(ip_address));
-        snprintf(footer_text, sizeof(footer_text), "FTP Server listening on - \"%s\"", ip_address);
+        snprintf(footer_text, sizeof(footer_text), "FTP Server - %s", ip_address);
         text_draw(body_text_cdata, body_text, footer_text, WINDOW_WIDTH - X_MARGIN - text_calculate_width(body_text_cdata, footer_text),
                   WINDOW_HEIGHT - Y_MARGIN, &text_color);
 
