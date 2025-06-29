@@ -15,7 +15,7 @@ static MenuItem menu_items[] = {
     {"System Info", menu_system_info_activate},
     {"EEPROM Settings", menu_eeprom_activate},
     {"Clear Cache", xbox_flush_cache},
-    {"Exit", xbox_exit}};
+    {"Reboot", xbox_exit}};
 
 static Menu menu = {
     .item = menu_items,
