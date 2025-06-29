@@ -18,6 +18,7 @@
 
 #include "assets/background.h"
 #include "assets/font_roboto.h"
+#include "assets/font_ubuntu_mono.h"
 
 #define NANOPRINTF_IMPLEMENTATION
 #define NANOPRINTF_USE_LARGE_FORMAT_SPECIFIERS       1
@@ -99,8 +100,8 @@ int main(void)
     body_text = texture_create(body_text_bitmap, FONT_BITMAP_WIDTH, FONT_BITMAP_HEIGHT, XGU_TEXTURE_FORMAT_A8);
     assert(body_text);
 
-    // Create font texture for header text (larger)
-    stbtt_BakeFontBitmap(Roboto_Regular, 0, HEADER_FONT_SIZE, header_text_bitmap, FONT_BITMAP_WIDTH, FONT_BITMAP_HEIGHT, 32, 96, header_text_cdata);
+    // Create font texture for header text
+    stbtt_BakeFontBitmap(UbuntuMono_Regular, 0, HEADER_FONT_SIZE, header_text_bitmap, FONT_BITMAP_WIDTH, FONT_BITMAP_HEIGHT, 32, 96, header_text_cdata);
     header_text = texture_create(header_text_bitmap, FONT_BITMAP_WIDTH, FONT_BITMAP_HEIGHT, XGU_TEXTURE_FORMAT_A8);
     assert(header_text);
 
