@@ -96,7 +96,7 @@ int main(void)
     SDL_Init(SDL_INIT_GAMECONTROLLER);
 
     // Create font texture for body text
-    stbtt_BakeFontBitmap(Roboto_Regular, 0, BODY_FONT_SIZE, body_text_bitmap, FONT_BITMAP_WIDTH, FONT_BITMAP_HEIGHT, 32, 96, body_text_cdata);
+    stbtt_BakeFontBitmap(RobotoMono_Regular, 0, BODY_FONT_SIZE, body_text_bitmap, FONT_BITMAP_WIDTH, FONT_BITMAP_HEIGHT, 32, 96, body_text_cdata);
     body_text = texture_create(body_text_bitmap, FONT_BITMAP_WIDTH, FONT_BITMAP_HEIGHT, XGU_TEXTURE_FORMAT_A8);
     assert(body_text);
 
