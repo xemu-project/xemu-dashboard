@@ -12,7 +12,7 @@ This is unofficial and not affiliated with xemu.
 4. Autolaunches Xbox ISO images if detected.
 
 ## Screenshot
-![Screenshot1](/.github/image.png)
+![Screenshot1](/.github/image.png?)
 
 ## Attribution
 * See the respective folders for license info
