@@ -11,6 +11,30 @@ This is unofficial and not affiliated with xemu.
 3. EEPROM settings page to adjust parameters without external tools or having to install Microsoft Dashboard.
 4. Autolaunches Xbox ISO images if detected.
 
+## Compilation
+From within this project directory:
+```
+git clone --recursive https://github.com/XboxDev/nxdk.git
+./nxdk/bin/activate
+make -C nxdk NXDK_ONLY=y
+make -C nxdk tools
+
+mkdir build && cd build
+cmake .. -DCMAKE_TOOLCHAIN_FILE=nxdk/share/toolchain-nxdk.cmake -DCMAKE_BUILD_TYPE=Release
+cmake --build .
+```
+
+## Generation of qcow image
+From within the build directory:
+```
+sudo apt-get install python3-pip qemu-utils
+pip3 install pyfatx
+mkdir c_drive
+cp default.xbe c_drive/xboxdash.xbe
+python3 ../scripts/create_hdd_image.py c_drive -o xbox_hdd.img
+qemu-img convert -f raw -O qcow2 -c xbox_hdd.img xbox_hdd.qcow2
+```
+
 ## Screenshot
 ![Screenshot1](/.github/image.png?)
 
