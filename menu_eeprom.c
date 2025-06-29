@@ -12,7 +12,9 @@ static char eeprom_setting_audio_flags[64] = "";
 static char eeprom_setting_video_region[64] = "";
 static char eeprom_setting_video_aspect_ratio[64] = "";
 static char eeprom_setting_video_refresh_rate[64] = "";
-static char eeprom_setting_video_resolution[64] = "";
+static char eeprom_setting_video_enable_480p[64] = "";
+static char eeprom_setting_video_enable_720p[64] = "";
+static char eeprom_setting_video_enable_1080i[64] = "";
 static char eeprom_setting_audio_channels[64] = "";
 static char eeprom_setting_audio_encoding[64] = "";
 static char eeprom_setting_apply_text[64] = "";
@@ -103,12 +105,23 @@ static void video_increment_refresh_rate(void)
     update_eeprom_text();
 }
 
-static void video_increment_resolution(void)
+static void video_toggle_480p(void)
 {
-    ULONG index = (video_flags >> 17) & 0x07;
-    index = (index + 1) % 10;
-    video_flags &= ~(VIDEO_MODE_480P | VIDEO_MODE_720P | VIDEO_MODE_1080I);
-    video_flags |= index << 17;
+    video_flags ^= VIDEO_MODE_480P;
+    dirty = 1;
+    update_eeprom_text();
+}
+
+static void video_toggle_720p(void)
+{
+    video_flags ^= VIDEO_MODE_720P;
+    dirty = 1;
+    update_eeprom_text();
+}
+
+static void video_toggle_1080i(void)
+{
+    video_flags ^= VIDEO_MODE_1080I;
     dirty = 1;
     update_eeprom_text();
 }
@@ -142,7 +155,10 @@ static MenuItem menu_items[] = {
     {eeprom_setting_video_flags, NULL},
     {eeprom_setting_video_aspect_ratio, video_increment_aspect_ratio},
     {eeprom_setting_video_refresh_rate, video_increment_refresh_rate},
-    {eeprom_setting_video_resolution, video_increment_resolution},
+    {"  Resolutions:", NULL},
+    {eeprom_setting_video_enable_480p, video_toggle_480p},
+    {eeprom_setting_video_enable_720p, video_toggle_720p},
+    {eeprom_setting_video_enable_1080i, video_toggle_1080i},
     {eeprom_setting_audio_flags, NULL},
     {eeprom_setting_audio_channels, audio_increment_channel},
     {eeprom_setting_audio_encoding, audio_increment_encoding}};
@@ -229,10 +245,10 @@ static void update_eeprom_text(void)
         } else {
             ratio = "Normal";
         }
-        snprintf(eeprom_setting_video_aspect_ratio, sizeof(eeprom_setting_video_aspect_ratio), "    Aspect Ratio: %s", ratio);
+        snprintf(eeprom_setting_video_aspect_ratio, sizeof(eeprom_setting_video_aspect_ratio), "  Aspect Ratio: %s", ratio);
 
         index = 0;
-        index += snprintf(&eeprom_setting_video_refresh_rate[index], sizeof(eeprom_setting_video_refresh_rate) - index, "    Refresh Rate: ");
+        index += snprintf(&eeprom_setting_video_refresh_rate[index], sizeof(eeprom_setting_video_refresh_rate) - index, "  Refresh Rate: ");
         if ((video_flags & (VIDEO_50Hz | VIDEO_60Hz)) == 0) {
             index += snprintf(&eeprom_setting_video_refresh_rate[index], sizeof(eeprom_setting_video_refresh_rate) - index, "Not set");
         } else {
@@ -247,17 +263,14 @@ static void update_eeprom_text(void)
             }
         }
 
-        index = 0;
-        index += snprintf(&eeprom_setting_video_resolution[index], sizeof(eeprom_setting_video_resolution) - index, "    Video Resolutions: SDTV");
-        if (video_flags & VIDEO_MODE_480P) {
-            index += snprintf(&eeprom_setting_video_resolution[index], sizeof(eeprom_setting_video_resolution) - index, " / 480p");
-        }
-        if (video_flags & VIDEO_MODE_720P) {
-            index += snprintf(&eeprom_setting_video_resolution[index], sizeof(eeprom_setting_video_resolution) - index, " / 720p");
-        }
-        if (video_flags & VIDEO_MODE_1080I) {
-            index += snprintf(&eeprom_setting_video_resolution[index], sizeof(eeprom_setting_video_resolution) - index, " / 1080i");
-        }
+        snprintf(eeprom_setting_video_enable_480p, sizeof(eeprom_setting_video_enable_480p), "    480p [%c]",
+                 (video_flags & VIDEO_MODE_480P) ? 'x' : ' ');
+
+        snprintf(eeprom_setting_video_enable_720p, sizeof(eeprom_setting_video_enable_720p), "    720p [%c]",
+                 (video_flags & VIDEO_MODE_720P) ? 'x' : ' ');
+
+        snprintf(eeprom_setting_video_enable_1080i, sizeof(eeprom_setting_video_enable_1080i), "    1080i [%c]",
+                 (video_flags & VIDEO_MODE_1080I) ? 'x' : ' ');
     }
 
     snprintf(eeprom_setting_audio_flags, sizeof(eeprom_setting_audio_flags), "Audio Flags: 0x%08lx ", audio_flags);
@@ -270,10 +283,10 @@ static void update_eeprom_text(void)
         } else {
             channels = "Stereo";
         }
-        snprintf(eeprom_setting_audio_channels, sizeof(eeprom_setting_audio_channels), "    Channels: %s", channels);
+        snprintf(eeprom_setting_audio_channels, sizeof(eeprom_setting_audio_channels), "  Channels: %s", channels);
 
         int index = 0;
-        index += snprintf(&eeprom_setting_audio_encoding[index], sizeof(eeprom_setting_audio_encoding) - index, "    Encoding: ");
+        index += snprintf(&eeprom_setting_audio_encoding[index], sizeof(eeprom_setting_audio_encoding) - index, "  Encoding: ");
         if ((audio_flags & AUDIO_FLAG_ENCODING_MASK) == 0) {
             index += snprintf(&eeprom_setting_audio_encoding[index], sizeof(eeprom_setting_audio_encoding) - index, " None");
         } else {
