@@ -174,7 +174,15 @@ int main(void)
         renderer_start();
 
         // Render the background
-        renderer_draw_textured_rectangle(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT, background_texture, NULL, NULL);
+        static float x_offset = 0;
+        xgu_texture_boundary_t boundary = {
+            0 + x_offset, 640 + x_offset, 0, 480
+        };
+        x_offset += 0.25f;
+        if (x_offset > 127) {
+            x_offset = 0;
+        }
+        renderer_draw_textured_rectangle(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT, background_texture, NULL, &boundary);
 
         // Render the header text
         text_draw(header_text_cdata, header_text, "xemu", X_MARGIN, Y_MARGIN + (int)BODY_FONT_SIZE, &highlight_color);
