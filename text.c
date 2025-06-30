@@ -3,7 +3,6 @@
 #include <xgu/xgu.h>
 #include <xgu/xgux.h>
 
-#include "assets/font_roboto.h"
 #include "main.h"
 #include "renderer.h"
 

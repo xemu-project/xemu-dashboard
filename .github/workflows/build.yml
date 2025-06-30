@@ -57,6 +57,12 @@ jobs:
           echo
           echo "==== LICENSE for xgu ===="
           cat lib/xgu/LICENSE
+          echo
+          echo "==== LICENSE for RobotoMono-Regular.ttf ===="
+          cat assets/LICENSE_roboto_mono
+          echo
+          echo "==== LICENSE for UbuntuMono-Regular.ttf ===="
+          cat assets/LICENSE_ubuntu_mono
         } > artifact/LICENSE
 
     - name: Upload artifact
