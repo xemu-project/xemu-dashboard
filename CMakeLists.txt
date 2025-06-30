@@ -1,10 +1,10 @@
 cmake_minimum_required(VERSION 3.14)
-set(XBE_TITLE xemu_menu)
+set(XBE_TITLE xemu-dashboard)
 set(XBOX_ISO_DIR ${CMAKE_CURRENT_BINARY_DIR}/xiso)
 set(CMAKE_C_STANDARD 11)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
-project(xemu_menu C CXX ASM)
+project(xemu-dashboard C CXX ASM)
 
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release)
@@ -27,7 +27,7 @@ pkg_search_module(SDL2 REQUIRED sdl2)
 
 add_definitions(-DXBOX -DNXDK -DSDL_DISABLE_JOYSTICK_INIT_DELAY -DFTP_CUSTOM_ROOT_PATH -DMEMP_NUM_NETBUF=6 -DMEMP_NUM_NETCONN=6)
 
-add_executable(xemu_menu
+add_executable(xemu-dashboard
     main.c
     menu_main.c
     menu_system_info.c
@@ -39,25 +39,25 @@ add_executable(xemu_menu
     lib/ftpd/ftp_file.c lib/ftpd/ftp_server.c lib/ftpd/ftp.c
 )
 
-target_compile_options(xemu_menu PRIVATE -Wall -Wextra)
+target_compile_options(xemu-dashboard PRIVATE -Wall -Wextra)
 
-target_include_directories(xemu_menu PRIVATE lib)
+target_include_directories(xemu-dashboard PRIVATE lib)
 
 # Bring in the DVD drive automount support
-target_link_libraries(xemu_menu PUBLIC ${NXDK_DIR}/lib/libnxdk_automount_d.lib)
-target_link_options(xemu_menu PRIVATE "-include:_automount_d_drive")
+target_link_libraries(xemu-dashboard PUBLIC ${NXDK_DIR}/lib/libnxdk_automount_d.lib)
+target_link_options(xemu-dashboard PRIVATE "-include:_automount_d_drive")
 
 # Bring in networking support
-target_link_libraries(xemu_menu PUBLIC ${NXDK_DIR}/lib/libnxdk_net.lib)
-target_include_directories(xemu_menu PRIVATE ${NXDK_DIR}/lib/net/lwip/src/include ${NXDK_DIR}/lib/net/nforceif/include ${NXDK_DIR}/lib/net/nvnetdrv)
+target_link_libraries(xemu-dashboard PUBLIC ${NXDK_DIR}/lib/libnxdk_net.lib)
+target_include_directories(xemu-dashboard PRIVATE ${NXDK_DIR}/lib/net/lwip/src/include ${NXDK_DIR}/lib/net/nforceif/include ${NXDK_DIR}/lib/net/nvnetdrv)
 
 # Bring in pbkit support
-target_link_libraries(xemu_menu PUBLIC ${NXDK_DIR}/lib/libpbkit.lib)
+target_link_libraries(xemu-dashboard PUBLIC ${NXDK_DIR}/lib/libpbkit.lib)
 
 # Bring in SDL2 support
-target_include_directories(xemu_menu PRIVATE ${SDL2_INCLUDE_DIRS})
-target_link_libraries(xemu_menu PUBLIC ${SDL2_LIBRARIES})
-target_link_directories(xemu_menu PUBLIC ${SDL2_LIBRARY_DIRS})
+target_include_directories(xemu-dashboard PRIVATE ${SDL2_INCLUDE_DIRS})
+target_link_libraries(xemu-dashboard PUBLIC ${SDL2_LIBRARIES})
+target_link_directories(xemu-dashboard PUBLIC ${SDL2_LIBRARY_DIRS})
 
 #Post-build commands
 file(MAKE_DIRECTORY ${XBOX_ISO_DIR})
@@ -67,7 +67,7 @@ add_custom_target(cxbe_convert ALL
     COMMENT "CXBE Conversion: [EXE -> XBE]"
     VERBATIM COMMAND "${CMAKE_COMMAND}" -E env ${NXDK_DIR}/tools/cxbe/cxbe -OUT:${CMAKE_CURRENT_BINARY_DIR}/default.xbe -TITLE:${XBE_TITLE} ${CMAKE_CURRENT_BINARY_DIR}/${XBE_TITLE}.exe > NUL 2>&1
 )
-add_dependencies(cxbe_convert xemu_menu)
+add_dependencies(cxbe_convert xemu-dashboard)
 
 #Post-build xbe to xiso conversion
 add_custom_target(xbe_iso ALL
