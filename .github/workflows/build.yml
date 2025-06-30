@@ -40,11 +40,11 @@ jobs:
       run: |
         mkdir -p artifact
         mv xbox_hdd.qcow2 artifact/xbox_hdd.qcow2
-        mv build/xemu_menu.iso artifact/xemu_menu.iso
+        mv build/xemu-dashboard.iso artifact/xemu-dashboard.iso
         mv build/default.xbe artifact/default.xbe
 
     - name: Upload artifact
       uses: actions/upload-artifact@v4
       with:
-        name: xemu_menu
+        name: xemu-dashboard
         path: artifact
