@@ -9,12 +9,14 @@ static void xbox_exit(void);
 static void xbox_flush_cache(void);
 void menu_system_info_activate(void);
 void menu_eeprom_activate(void);
+void menu_install_dash_activate(void);
 
 static MenuItem menu_items[] = {
     {"Main Menu", NULL},
     {"System Info", menu_system_info_activate},
     {"EEPROM Settings", menu_eeprom_activate},
     {"Clear Cache", xbox_flush_cache},
+    {"Install", menu_install_dash_activate},
     {"Reboot", xbox_exit}};
 
 static Menu menu = {
