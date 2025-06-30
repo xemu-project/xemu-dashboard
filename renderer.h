@@ -34,6 +34,7 @@ typedef struct xgu_texture_tint
 
 void renderer_initialise(void);
 void renderer_start(void);
+void renderer_set_scissor(int x, int y, int width, int height);
 void renderer_draw_rectangle(int x, int y, int width, int height, const xgu_texture_tint_t *tint);
 void renderer_draw_textured_rectangle(int x, int y, int width, int height,
                                       const xgu_texture_t *texture, const xgu_texture_tint_t *tint, const xgu_texture_boundary_t *boundary);
