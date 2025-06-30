@@ -64,3 +64,25 @@ jobs:
       with:
         name: xemu-dashboard
         path: artifact
+
+    - name: Set release tag name
+      id: release_tag
+      run: echo "tag=v$(date +'%Y%m%d-%H%M')" >> "$GITHUB_OUTPUT"
+
+    - name: Create Git tag
+      if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+      run: |
+        git config user.name "github-actions"
+        git config user.email "github-actions@github.com"
+        git tag "${{ steps.release_tag.outputs.tag }}"
+        git push origin "${{ steps.release_tag.outputs.tag }}"
+
+    - name: Create GitHub Release
+      if: github.event_name == 'push' && github.ref == 'refs/heads/master'
+      uses: softprops/action-gh-release@v2
+      with:
+        tag_name: ${{ steps.release_tag.outputs.tag }}
+        name: "Build ${{ steps.release_tag.outputs.tag }}"
+        files: artifact/*
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
