@@ -49,6 +49,7 @@ static xgu_texture_t *background_texture;
 static const xgu_texture_tint_t highlight_color = {16, 124, 16, 255};
 static const xgu_texture_tint_t text_color = {255, 255, 255, 255};
 static const xgu_texture_tint_t header_color = {100, 100, 100, 255};
+static const xgu_texture_tint_t info_color = {128, 128, 128, 255};
 
 static xgu_texture_t *body_text;
 static stbtt_bakedchar body_text_cdata[96];
@@ -205,14 +206,21 @@ int main(void)
         snprintf(footer_text, sizeof(footer_text), "Waiting for a Xbox DVD");
         text_draw(body_text_cdata, body_text, footer_text, WINDOW_WIDTH - X_MARGIN - text_calculate_width(body_text_cdata, footer_text),
                   WINDOW_HEIGHT - Y_MARGIN - (int)BODY_FONT_SIZE, &text_color);
+
+        SYSTEMTIME systemtime;
+        GetLocalTime(&systemtime);
+        snprintf(footer_text, sizeof(footer_text), "%04d-%02d-%02d %02d:%02d:%02d", systemtime.wYear, systemtime.wMonth, systemtime.wDay,
+                 systemtime.wHour, systemtime.wMinute, systemtime.wSecond);
+        text_draw(body_text_cdata, body_text, footer_text, WINDOW_WIDTH - X_MARGIN - text_calculate_width(body_text_cdata, footer_text),
+                  Y_MARGIN + (int)BODY_FONT_SIZE, &info_color);
+
         network_get_ip_address(ip_address, sizeof(ip_address));
         snprintf(footer_text, sizeof(footer_text), "FTP Server - %s", ip_address);
         text_draw(body_text_cdata, body_text, footer_text, WINDOW_WIDTH - X_MARGIN - text_calculate_width(body_text_cdata, footer_text),
                   WINDOW_HEIGHT - Y_MARGIN, &text_color);
 
         // Render the build version
-        text_draw(body_text_cdata, body_text, GIT_VERSION, X_MARGIN,
-                  WINDOW_HEIGHT - Y_MARGIN, &(xgu_texture_tint_t){128,128,128,255});
+        text_draw(body_text_cdata, body_text, GIT_VERSION, X_MARGIN, WINDOW_HEIGHT - Y_MARGIN, &info_color);
 
         // Render the actual menu items
         render_menu();
