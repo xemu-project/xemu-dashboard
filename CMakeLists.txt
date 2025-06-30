@@ -33,6 +33,7 @@ add_executable(xemu-dashboard
     menu_main.c
     menu_system_info.c
     menu_eeprom.c
+    menu_install_dash.c
     dvd_autolaunch.c
     network.c
     text.c

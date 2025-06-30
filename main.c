@@ -6,6 +6,7 @@
 #include <hal/video.h>
 #include <hal/xbox.h>
 #include <nxdk/mount.h>
+#include <nxdk/path.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -101,6 +102,14 @@ int main(void)
     nxMountDrive('Y', "\\Device\\Harddisk0\\Partition4\\");
     nxMountDrive('Z', "\\Device\\Harddisk0\\Partition5\\");
     nxMountDrive('F', "\\Device\\Harddisk0\\Partition6\\");
+
+    // Mount the root is active xbe to Q:
+    {
+        char targetPath[MAX_PATH];
+        nxGetCurrentXbeNtPath(targetPath);
+        *(strrchr(targetPath, '\\') + 1) = '\0';
+        nxMountDrive('Q', targetPath);
+    }
 
     network_initialise();
     autolaunch_dvd_runner();
@@ -280,8 +289,6 @@ static void render_menu(void)
     // Start at the bottom of the first menu item
     int y = MENU_Y + item_height;
 
-    printf("%d < %d %d < %d, offset %d\n", MENU_Y, selected_y_top, selected_y_bottom,
-           FOOTER_Y - (int)BODY_FONT_SIZE, current_menu->scroll_offset);
     // Scroll the selected item to be in view
     if (selected_y_top < MENU_Y + ITEM_PADDING) {
         current_menu->scroll_offset += (MENU_Y + ITEM_PADDING - selected_y_top + 3) >> 2;
