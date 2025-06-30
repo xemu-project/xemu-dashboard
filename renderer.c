@@ -131,6 +131,13 @@ void renderer_start(void)
     pb_end(p);
 }
 
+void renderer_set_scissor(int x, int y, int width, int height)
+{
+    p = pb_begin();
+    p = xgu_set_scissor_rect(p, false, x, y, width, height);
+    pb_end(p);
+}
+
 void renderer_draw_rectangle(int x, int y, int width, int height, const xgu_texture_tint_t *tint)
 {
     p = pb_begin();
