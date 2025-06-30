@@ -59,6 +59,14 @@ target_include_directories(xemu-dashboard PRIVATE ${SDL2_INCLUDE_DIRS})
 target_link_libraries(xemu-dashboard PUBLIC ${SDL2_LIBRARIES})
 target_link_directories(xemu-dashboard PUBLIC ${SDL2_LIBRARY_DIRS})
 
+# Bring in the git tag
+execute_process(
+  COMMAND git describe --tags --dirty --always
+  OUTPUT_VARIABLE GIT_VERSION
+  OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+add_compile_definitions(GIT_VERSION="${GIT_VERSION}")
+
 #Post-build commands
 file(MAKE_DIRECTORY ${XBOX_ISO_DIR})
 
