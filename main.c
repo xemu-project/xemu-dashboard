@@ -20,6 +20,10 @@
 #include "assets/font_roboto.h"
 #include "assets/font_ubuntu_mono.h"
 
+#ifndef GIT_VERSION
+#define GIT_VERSION ""
+#endif
+
 #define NANOPRINTF_IMPLEMENTATION
 #define NANOPRINTF_USE_LARGE_FORMAT_SPECIFIERS       1
 #define NANOPRINTF_USE_FIELD_WIDTH_FORMAT_SPECIFIERS 1
@@ -197,6 +201,10 @@ int main(void)
         snprintf(footer_text, sizeof(footer_text), "FTP Server - %s", ip_address);
         text_draw(body_text_cdata, body_text, footer_text, WINDOW_WIDTH - X_MARGIN - text_calculate_width(body_text_cdata, footer_text),
                   WINDOW_HEIGHT - Y_MARGIN, &text_color);
+
+        // Render the build version
+        text_draw(body_text_cdata, body_text, GIT_VERSION, X_MARGIN,
+                  WINDOW_HEIGHT - Y_MARGIN, &(xgu_texture_tint_t){128,128,128,255});
 
         // Render the actual menu items
         render_menu();
