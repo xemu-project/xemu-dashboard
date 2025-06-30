@@ -12,6 +12,7 @@ Set the following: `xemu Settings > System > Hard Disk` to point the `xbox_hdd.q
 ## Compilation
 From within this project directory:
 ```
+clang -v # First ensure clang is v19 or above
 git clone --recursive https://github.com/XboxDev/nxdk.git
 ./nxdk/bin/activate
 make -C nxdk NXDK_ONLY=y

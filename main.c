@@ -16,10 +16,6 @@
 #include "main.h"
 #include "renderer.h"
 
-#include "assets/background.h"
-#include "assets/font_roboto.h"
-#include "assets/font_ubuntu_mono.h"
-
 #ifndef GIT_VERSION
 #define GIT_VERSION ""
 #endif
@@ -80,7 +76,19 @@ void _putc(int c, void *ctx)
     }
 }
 
-#include <hal/debug.h>
+static const unsigned char RobotoMono_Regular[] = {
+    #embed "assets/RobotoMono-Regular.ttf"
+};
+
+static const unsigned char UbuntuMono_Regular[] = {
+    #embed "assets/UbuntuMono-Regular.ttf"
+};
+
+static const unsigned char background_png[] = {
+    #embed "assets/background.png"
+};
+
+
 int main(void)
 {
     XVideoSetMode(WINDOW_WIDTH, WINDOW_HEIGHT, 32, REFRESH_DEFAULT);

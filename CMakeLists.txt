@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.14)
 set(XBE_TITLE xemu-dashboard)
 set(XBOX_ISO_DIR ${CMAKE_CURRENT_BINARY_DIR}/xiso)
-set(CMAKE_C_STANDARD 11)
+set(CMAKE_C_STANDARD 23)
 set(CMAKE_C_STANDARD_REQUIRED ON)
 
 project(xemu-dashboard C CXX ASM)
@@ -9,8 +9,6 @@ project(xemu-dashboard C CXX ASM)
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release)
 endif()
-
-
 
 set(CMAKE_ASM_FLAGS_DEBUG "${CMAKE_ASM_FLAGS_DEBUG} -g -gdwarf-4")
 set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -g -gdwarf-4")
