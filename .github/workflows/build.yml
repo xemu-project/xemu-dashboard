@@ -42,6 +42,22 @@ jobs:
         mv xbox_hdd.qcow2 artifact/xbox_hdd.qcow2
         mv build/xemu-dashboard.iso artifact/xemu-dashboard.iso
         mv build/default.xbe artifact/default.xbe
+        {
+          echo "==== LICENSE for xemu-dashboard ===="
+          cat LICENSE
+          echo
+          echo "==== LICENSE for ftpd ===="
+          cat lib/ftpd/LICENSE
+          echo
+          echo "==== LICENSE for nanoprintf ===="
+          cat lib/nanoprintf/LICENSE
+          echo
+          echo "==== LICENSE for stb ===="
+          cat lib/stb/LICENSE
+          echo
+          echo "==== LICENSE for xgu ===="
+          cat lib/xgu/LICENSE
+        } > artifact/LICENSE
 
     - name: Upload artifact
       uses: actions/upload-artifact@v4
