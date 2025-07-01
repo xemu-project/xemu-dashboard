@@ -211,13 +211,13 @@ int main(void)
         // Render footer text
         snprintf(menu_text, sizeof(menu_text), "Waiting for a Xbox DVD");
         text_draw(body_text_cdata, body_text, menu_text, WINDOW_WIDTH - X_MARGIN - text_calculate_width(body_text_cdata, menu_text),
-                  WINDOW_HEIGHT - Y_MARGIN - (int)BODY_FONT_SIZE, &text_color);
+                  FOOTER_Y, &text_color);
 
         char network_status[32];
         network_get_status(network_status, sizeof(network_status));
         snprintf(menu_text, sizeof(menu_text), "FTP Server - %s", network_status);
         text_draw(body_text_cdata, body_text, menu_text, WINDOW_WIDTH - X_MARGIN - text_calculate_width(body_text_cdata, menu_text),
-                  WINDOW_HEIGHT - Y_MARGIN, &text_color);
+                  FOOTER_Y + BODY_FONT_SIZE, &text_color);
 
         // Render the build version
         text_draw(body_text_cdata, body_text, GIT_VERSION, X_MARGIN, WINDOW_HEIGHT - Y_MARGIN, &info_color);
@@ -265,38 +265,48 @@ static void render_menu(void)
     const stbtt_bakedchar *datum = &body_text_cdata['(' - 32];
     const int item_height = (const int)(datum->y1 - datum->y0) + ITEM_PADDING;
 
-    int y = MENU_Y;
     Menu *current_menu = menu_peak();
     assert(current_menu != NULL);
 
-    const int visible_height = WINDOW_HEIGHT - y - Y_MARGIN;
-    const int visible_items = visible_height / item_height;
+    // The first line of each menu is reserved for the menu title
+    text_draw(body_text_cdata, body_text, current_menu->item[0].label, X_MARGIN, MENU_Y, &header_color);
 
-    int scroll_offset = 0;
-    if (current_menu->selected_index < scroll_offset) {
-        scroll_offset = current_menu->selected_index;
-    } else if (current_menu->selected_index >= scroll_offset + visible_items) {
-        scroll_offset = current_menu->selected_index - visible_items + 1;
+    renderer_set_scissor(0, MENU_Y + ITEM_PADDING, WINDOW_WIDTH, FOOTER_Y - (int)BODY_FONT_SIZE - MENU_Y);
+
+    const int selected_y_bottom = MENU_Y + current_menu->selected_index * item_height +
+                                  current_menu->scroll_offset + ITEM_PADDING;
+    const int selected_y_top = selected_y_bottom - item_height;
+
+    // Start at the bottom of the first menu item
+    int y = MENU_Y + item_height;
+
+    printf("%d < %d %d < %d, offset %d\n", MENU_Y, selected_y_top, selected_y_bottom,
+           FOOTER_Y - (int)BODY_FONT_SIZE, current_menu->scroll_offset);
+    // Scroll the selected item to be in view
+    if (selected_y_top < MENU_Y + ITEM_PADDING) {
+        current_menu->scroll_offset += (MENU_Y + ITEM_PADDING - selected_y_top + 3) >> 2;
+    } else if (selected_y_bottom > FOOTER_Y - (int)BODY_FONT_SIZE) {
+        current_menu->scroll_offset -= (selected_y_bottom - (FOOTER_Y - (int)BODY_FONT_SIZE) + 3) >> 2;
     }
 
-    for (int i = 0; i < visible_items; ++i) {
-        int item_index = scroll_offset + i;
-        if (item_index >= current_menu->item_count) {
-            break;
-        }
-
-        xgu_texture_tint_t color = text_color;
-        if (current_menu->item[item_index].callback == NULL) {
-            color = (item_index == 0) ? header_color : text_color;
-        } else if (item_index == current_menu->selected_index) {
+    for (int i = 1; i < current_menu->item_count; ++i) {
+        xgu_texture_tint_t color;
+        if (current_menu->item[i].callback == NULL) {
+            color = info_color;
+        } else if (i == current_menu->selected_index) {
             color = highlight_color;
+        } else {
+            color = text_color;
         }
 
         WaitForSingleObject(text_render_mutex, INFINITE);
-        text_draw(body_text_cdata, body_text, current_menu->item[item_index].label, X_MARGIN, y, &color);
+        text_draw(body_text_cdata, body_text, current_menu->item[i].label, X_MARGIN,
+                  y + current_menu->scroll_offset, &color);
         ReleaseMutex(text_render_mutex);
         y += item_height;
     }
+
+    renderer_set_scissor(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
 }
 
 void usbh_core_deinit();

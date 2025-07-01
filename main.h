@@ -17,8 +17,9 @@
 #define X_MARGIN           20
 #define FONT_BITMAP_WIDTH  512
 #define FONT_BITMAP_HEIGHT 512
-#define HEADER_Y (Y_MARGIN + HEADER_FONT_SIZE)
-#define MENU_Y (HEADER_Y + BODY_FONT_SIZE + ITEM_PADDING);
+#define HEADER_Y (Y_MARGIN + (int)HEADER_FONT_SIZE)
+#define MENU_Y (HEADER_Y + (int)BODY_FONT_SIZE + ITEM_PADDING)
+#define FOOTER_Y (WINDOW_HEIGHT - Y_MARGIN - (int)BODY_FONT_SIZE)
 
 void _putc(int c, void *ctx);
 
@@ -43,6 +44,7 @@ typedef struct
     MenuItem *item;
     int item_count;
     int selected_index;
+    int scroll_offset;
 } Menu;
 
 extern HANDLE text_render_mutex;
