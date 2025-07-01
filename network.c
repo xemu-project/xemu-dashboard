@@ -34,7 +34,7 @@ void network_initialise(void)
     network_thread_handle = CreateThread(NULL, 0, network_thread, NULL, 0, NULL);
 }
 
-void network_get_ip_address(char *ip_address_buffer, char buffer_length)
+void network_get_status(char *ip_address_buffer, char buffer_length)
 {
     struct netif *netif = netif_default;
     if (netif == NULL || !netif_is_up(netif)) {

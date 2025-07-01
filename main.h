@@ -17,6 +17,8 @@
 #define X_MARGIN           20
 #define FONT_BITMAP_WIDTH  512
 #define FONT_BITMAP_HEIGHT 512
+#define HEADER_Y (Y_MARGIN + HEADER_FONT_SIZE)
+#define MENU_Y (HEADER_Y + BODY_FONT_SIZE + ITEM_PADDING);
 
 void _putc(int c, void *ctx);
 
@@ -50,7 +52,7 @@ Menu *menu_peak(void);
 Menu *menu_pop(void);
 
 void network_initialise(void);
-void network_get_ip_address(char *ip_address_buffer, char buffer_length);
+void network_get_status(char *ip_address_buffer, char buffer_length);
 
 void autolaunch_dvd_runner(void);
 void main_menu_activate(void);
