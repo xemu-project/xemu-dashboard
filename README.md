@@ -10,16 +10,16 @@ Set the following: `xemu Settings > System > Hard Disk` to point the `xbox_hdd.q
 4. Autolaunches Xbox ISO images if detected.
 
 ## Compilation
+From someplace on your system, clone the [nxdk](https://github.com/XboxDev/nxdk)
+```
+clang -v # First ensure clang is v20 or above
+git clone --recursive https://github.com/XboxDev/nxdk.git
+```
+
 From within this project directory:
 ```
-clang -v # First ensure clang is v19 or above
-git clone --recursive https://github.com/XboxDev/nxdk.git
-./nxdk/bin/activate
-make -C nxdk NXDK_ONLY=y
-make -C nxdk tools
-
 mkdir build && cd build
-cmake .. -DCMAKE_TOOLCHAIN_FILE=nxdk/share/toolchain-nxdk.cmake -DCMAKE_BUILD_TYPE=Release
+cmake .. -DCMAKE_TOOLCHAIN_FILE=<path_to_nxdk>/share/toolchain-nxdk.cmake -DCMAKE_BUILD_TYPE=Release
 cmake --build .
 ```
 
