@@ -246,7 +246,7 @@ void menu_push(Menu *menu)
 {
     menu_stack[++menu_stack_top] = menu;
     if (menu->selected_index == 0) {
-        menu->selected_index = 1;
+        menu->selected_index = 1 % menu->item_count;
     }
 }
 
