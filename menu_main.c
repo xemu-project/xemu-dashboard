@@ -95,4 +95,15 @@ static void xbox_flush_cache(void)
 
     // Delete E:\CACHE too
     recursive_empty_folder("E:\\CACHE");
+
+    static MenuItem status_message_items[] = {
+        {"Cache cleared successfully", NULL}};
+
+    static Menu status_message = {
+        .item = status_message_items,
+        .item_count = sizeof(status_message_items) / sizeof(status_message_items),
+        .selected_index = 0,
+        .scroll_offset = 0};
+
+    menu_push(&status_message);
 }
