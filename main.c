@@ -78,17 +78,16 @@ void _putc(int c, void *ctx)
 }
 
 static const unsigned char RobotoMono_Regular[] = {
-    #embed "assets/RobotoMono-Regular.ttf"
+#embed "assets/RobotoMono-Regular.ttf"
 };
 
 static const unsigned char UbuntuMono_Regular[] = {
-    #embed "assets/UbuntuMono-Regular.ttf"
+#embed "assets/UbuntuMono-Regular.ttf"
 };
 
 static const unsigned char background_png[] = {
-    #embed "assets/background.png"
+#embed "assets/background.png"
 };
-
 
 int main(void)
 {
@@ -189,8 +188,7 @@ int main(void)
         // Render the background
         static float x_offset = 0;
         xgu_texture_boundary_t boundary = {
-            0 + x_offset, 640 + x_offset, 0, 480
-        };
+            0 + x_offset, 640 + x_offset, 0, 480};
         x_offset += 0.25f;
         if (x_offset > 127) {
             x_offset = 0;
@@ -198,25 +196,27 @@ int main(void)
         renderer_draw_textured_rectangle(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT, background_texture, NULL, &boundary);
 
         // Render the header text
-        text_draw(header_text_cdata, header_text, "xemu", X_MARGIN, Y_MARGIN + (int)BODY_FONT_SIZE, &highlight_color);
+        text_draw(header_text_cdata, header_text, "xemu", X_MARGIN, HEADER_Y, &highlight_color);
 
-        // Render footer text
-        char ip_address[32];
-        char footer_text[64];
-        snprintf(footer_text, sizeof(footer_text), "Waiting for a Xbox DVD");
-        text_draw(body_text_cdata, body_text, footer_text, WINDOW_WIDTH - X_MARGIN - text_calculate_width(body_text_cdata, footer_text),
-                  WINDOW_HEIGHT - Y_MARGIN - (int)BODY_FONT_SIZE, &text_color);
+        char menu_text[64];
 
+        // Render the Xbox system local time
         SYSTEMTIME systemtime;
         GetLocalTime(&systemtime);
-        snprintf(footer_text, sizeof(footer_text), "%04d-%02d-%02d %02d:%02d:%02d", systemtime.wYear, systemtime.wMonth, systemtime.wDay,
+        snprintf(menu_text, sizeof(menu_text), "%04d-%02d-%02d %02d:%02d:%02d", systemtime.wYear, systemtime.wMonth, systemtime.wDay,
                  systemtime.wHour, systemtime.wMinute, systemtime.wSecond);
-        text_draw(body_text_cdata, body_text, footer_text, WINDOW_WIDTH - X_MARGIN - text_calculate_width(body_text_cdata, footer_text),
-                  Y_MARGIN + (int)BODY_FONT_SIZE, &info_color);
+        text_draw(body_text_cdata, body_text, menu_text, WINDOW_WIDTH - X_MARGIN - text_calculate_width(body_text_cdata, menu_text),
+                  HEADER_Y, &info_color);
 
-        network_get_ip_address(ip_address, sizeof(ip_address));
-        snprintf(footer_text, sizeof(footer_text), "FTP Server - %s", ip_address);
-        text_draw(body_text_cdata, body_text, footer_text, WINDOW_WIDTH - X_MARGIN - text_calculate_width(body_text_cdata, footer_text),
+        // Render footer text
+        snprintf(menu_text, sizeof(menu_text), "Waiting for a Xbox DVD");
+        text_draw(body_text_cdata, body_text, menu_text, WINDOW_WIDTH - X_MARGIN - text_calculate_width(body_text_cdata, menu_text),
+                  WINDOW_HEIGHT - Y_MARGIN - (int)BODY_FONT_SIZE, &text_color);
+
+        char network_status[32];
+        network_get_status(network_status, sizeof(network_status));
+        snprintf(menu_text, sizeof(menu_text), "FTP Server - %s", network_status);
+        text_draw(body_text_cdata, body_text, menu_text, WINDOW_WIDTH - X_MARGIN - text_calculate_width(body_text_cdata, menu_text),
                   WINDOW_HEIGHT - Y_MARGIN, &text_color);
 
         // Render the build version
@@ -262,9 +262,10 @@ Menu *menu_peak(void)
 
 static void render_menu(void)
 {
-    const int item_height = (int)BODY_FONT_SIZE + ITEM_PADDING;
+    const stbtt_bakedchar *datum = &body_text_cdata['(' - 32];
+    const int item_height = (const int)(datum->y1 - datum->y0) + ITEM_PADDING;
 
-    int y = Y_MARGIN + item_height + item_height;
+    int y = MENU_Y;
     Menu *current_menu = menu_peak();
     assert(current_menu != NULL);
 
