@@ -31,6 +31,10 @@ void _putc(int c, void *ctx);
 #undef snprintf
 #define snprintf(...) npf_snprintf(__VA_ARGS__)
 
+// Use my own vsnprintf implementation
+#undef vsnprintf
+#define vsnprintf(...) npf_vsnprintf(__VA_ARGS__)
+
 #define DVD_LAUNCH_EVENT (SDL_USEREVENT + 0)
 
 typedef struct
