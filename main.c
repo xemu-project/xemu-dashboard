@@ -52,13 +52,11 @@ static const xgu_texture_tint_t text_color = {255, 255, 255, 255};
 static const xgu_texture_tint_t header_color = {100, 100, 100, 255};
 static const xgu_texture_tint_t info_color = {128, 128, 128, 255};
 
+static unsigned char *font_texture_bitmap;
 static xgu_texture_t *body_text;
 static stbtt_bakedchar body_text_cdata[96];
-static unsigned char body_text_bitmap[FONT_BITMAP_WIDTH * FONT_BITMAP_HEIGHT];
-
 static xgu_texture_t *header_text;
 static stbtt_bakedchar header_text_cdata[96];
-static unsigned char header_text_bitmap[FONT_BITMAP_WIDTH * FONT_BITMAP_HEIGHT];
 
 static SDL_GameController *controller = NULL;
 
@@ -117,14 +115,21 @@ int main(void)
     SDL_Init(SDL_INIT_GAMECONTROLLER);
 
     // Create font texture for body text
-    stbtt_BakeFontBitmap(RobotoMono_Regular, 0, BODY_FONT_SIZE, body_text_bitmap, FONT_BITMAP_WIDTH, FONT_BITMAP_HEIGHT, 32, 96, body_text_cdata);
-    body_text = texture_create(body_text_bitmap, FONT_BITMAP_WIDTH, FONT_BITMAP_HEIGHT, XGU_TEXTURE_FORMAT_A8);
+    int final_height = 0;
+    font_texture_bitmap = malloc(FONT_BITMAP_WIDTH * FONT_BITMAP_HEIGHT);
+    final_height = stbtt_BakeFontBitmap(RobotoMono_Regular, 0, BODY_FONT_SIZE, font_texture_bitmap,
+                                        FONT_BITMAP_WIDTH, FONT_BITMAP_HEIGHT, 32, 96, body_text_cdata);
+    assert(final_height > 0);
+    body_text = texture_create(font_texture_bitmap, FONT_BITMAP_WIDTH, final_height, XGU_TEXTURE_FORMAT_A8);
     assert(body_text);
 
     // Create font texture for header text
-    stbtt_BakeFontBitmap(UbuntuMono_Regular, 0, HEADER_FONT_SIZE, header_text_bitmap, FONT_BITMAP_WIDTH, FONT_BITMAP_HEIGHT, 32, 96, header_text_cdata);
-    header_text = texture_create(header_text_bitmap, FONT_BITMAP_WIDTH, FONT_BITMAP_HEIGHT, XGU_TEXTURE_FORMAT_A8);
+    final_height = stbtt_BakeFontBitmap(UbuntuMono_Regular, 0, HEADER_FONT_SIZE, font_texture_bitmap,
+                                        FONT_BITMAP_WIDTH, FONT_BITMAP_HEIGHT, 32, 96, header_text_cdata);
+    assert(final_height > 0);
+    header_text = texture_create(font_texture_bitmap, FONT_BITMAP_WIDTH, final_height, XGU_TEXTURE_FORMAT_A8);
     assert(header_text);
+    free(font_texture_bitmap);
 
     // Create background texture
     int width, height, channels;
