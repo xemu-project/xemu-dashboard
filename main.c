@@ -326,6 +326,9 @@ static void cleanup(void)
     if (body_text) {
         texture_destroy(body_text);
     }
+    if (header_text) {
+        texture_destroy(header_text);
+    }
     if (background_texture) {
         texture_destroy(background_texture);
     }
