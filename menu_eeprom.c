@@ -5,19 +5,11 @@
 
 #include "main.h"
 
-static char eeprom_setting_dvd_region[64] = "";
-static char eeprom_setting_language[64] = "";
-static char eeprom_setting_video_flags[64] = "";
-static char eeprom_setting_audio_flags[64] = "";
-static char eeprom_setting_video_region[64] = "";
-static char eeprom_setting_video_aspect_ratio[64] = "";
-static char eeprom_setting_video_refresh_rate[64] = "";
-static char eeprom_setting_video_enable_480p[64] = "";
-static char eeprom_setting_video_enable_720p[64] = "";
-static char eeprom_setting_video_enable_1080i[64] = "";
-static char eeprom_setting_audio_channels[64] = "";
-static char eeprom_setting_audio_encoding[64] = "";
-static char eeprom_setting_apply_text[64] = "";
+#define MAX_LINES      32
+#define MAX_CHARACTERS 512
+static char char_pool[MAX_CHARACTERS];
+static int pool_offset;
+
 static int dvd_region_index = 0;
 static int language_index = 0;
 static ULONG video_flags = 0;
@@ -146,23 +138,7 @@ static void audio_increment_encoding(void)
     update_eeprom_text();
 }
 
-static MenuItem menu_items[] = {
-    {"EEPROM Settings", NULL},
-    {eeprom_setting_apply_text, apply_settings},
-    {eeprom_setting_dvd_region, increment_dvd_region},
-    {eeprom_setting_language, increment_language},
-    {eeprom_setting_video_region, increment_video_region},
-    {eeprom_setting_video_flags, NULL},
-    {eeprom_setting_video_aspect_ratio, video_increment_aspect_ratio},
-    {eeprom_setting_video_refresh_rate, video_increment_refresh_rate},
-    {"  Resolutions:", NULL},
-    {eeprom_setting_video_enable_480p, video_toggle_480p},
-    {eeprom_setting_video_enable_720p, video_toggle_720p},
-    {eeprom_setting_video_enable_1080i, video_toggle_1080i},
-    {eeprom_setting_audio_flags, NULL},
-    {eeprom_setting_audio_channels, audio_increment_channel},
-    {eeprom_setting_audio_encoding, audio_increment_encoding}};
-
+static MenuItem menu_items[32];
 static Menu menu = {
     .item = menu_items,
     .item_count = sizeof(menu_items) / sizeof(MenuItem),
@@ -184,12 +160,35 @@ static void query_eeprom(void)
     av_region = data;
 }
 
+static void push_line(int line, void *callback, const char *format, ...)
+{
+    char *text_buffer = &char_pool[pool_offset];
+
+    va_list args;
+    va_start(args, format);
+    int written = vsnprintf(text_buffer, MAX_CHARACTERS - pool_offset, format, args);
+    va_end(args);
+
+    assert(line < MAX_LINES);
+    menu_items[line].label = text_buffer;
+    menu_items[line].callback = callback;
+
+    pool_offset += written + 1;
+    assert(pool_offset < MAX_CHARACTERS);
+}
+
 static void update_eeprom_text(void)
 {
+    int line = 0;
+    pool_offset = 0;
+    memset(menu_items, 0, sizeof(menu_items));
+
+    push_line(line++, NULL, "EEPROM Settings");
+
     if (dirty) {
-        strncpy(eeprom_setting_apply_text, "Apply unsaved changes", sizeof(eeprom_setting_apply_text));
+        push_line(line++, apply_settings, "Apply unsaved changes");
     } else {
-        strncpy(eeprom_setting_apply_text, "Apply", sizeof(eeprom_setting_apply_text));
+        push_line(line++, apply_settings, "Apply");
     }
 
     // clang-format off
@@ -204,7 +203,7 @@ static void update_eeprom_text(void)
         case 6: dvd_region = "6 China"; break;
         default: dvd_region = "Unknown";
     }
-    snprintf(eeprom_setting_dvd_region, sizeof(eeprom_setting_dvd_region), "DVD Region: %s", dvd_region);
+    push_line(line++, increment_dvd_region, "DVD Region: %s", dvd_region);
 
     const char *language;
     switch (language_index) {
@@ -220,7 +219,7 @@ static void update_eeprom_text(void)
         case 9: language = "9 Portuguese"; break;
         default: language = "Unknown";
     }
-    snprintf(eeprom_setting_language, sizeof(eeprom_setting_language), "Language: %s", language);
+    push_line(line++, increment_language, "Language: %s", language);
 
     const char *region;
     switch (av_region) {
@@ -230,77 +229,37 @@ static void update_eeprom_text(void)
         case AV_REGION_PALM: region = "PAL Brazil"; break;
         default: region = "Invalid Region";
     }
-    snprintf(eeprom_setting_video_region, sizeof(eeprom_setting_video_region), "Video Region: %s", region);
+    push_line(line++, increment_video_region, "Video Region: %s", region);
+
+    push_line(line++, NULL, "Video Flags: 0x%08lx", video_flags);
+
+    push_line(line++, video_increment_aspect_ratio, "  Aspect Ratio: %s",
+                   (video_flags & VIDEO_WIDESCREEN) ? "Widescreen" :
+                   (video_flags & VIDEO_LETTERBOX) ? "Letterbox" : "Normal");
+
+    push_line(line++, video_increment_refresh_rate, "  Refresh Rate: %s",
+                   (video_flags & VIDEO_50Hz && video_flags & VIDEO_60Hz) ? "50Hz / 60Hz" :
+                   (video_flags & VIDEO_50Hz) ? "50Hz" :
+                   (video_flags & VIDEO_60Hz) ? "60Hz" : "Not set");
+
+    push_line(line++, video_toggle_480p, "  480p: [%c]", (video_flags & VIDEO_MODE_480P) ? 'x' : ' ');
+    push_line(line++, video_toggle_720p, "  720p: [%c]", (video_flags & VIDEO_MODE_720P) ? 'x' : ' ');
+    push_line(line++, video_toggle_1080i, "  1080i: [%c]", (video_flags & VIDEO_MODE_1080I) ? 'x' : ' ');
+
+    push_line(line++, NULL, "Audio Flags: 0x%08lx", audio_flags);
+
+    push_line(line++, audio_increment_channel, "  Channel Configuration: %s",
+                (audio_flags & AUDIO_FLAG_CHANNEL_MONO) ? "Mono" :
+                (audio_flags & AUDIO_FLAG_CHANNEL_SURROUND) ? "Surround" : "Stereo");
+
+    push_line(line++, audio_increment_encoding, "  Encoding: %s",
+                (audio_flags & AUDIO_FLAG_ENCODING_AC3 && audio_flags & AUDIO_FLAG_ENCODING_DTS) ? "AC3 / DTS" :
+                (audio_flags & AUDIO_FLAG_ENCODING_AC3) ? "AC3" :
+                (audio_flags & AUDIO_FLAG_ENCODING_DTS) ? "DTS" : "None");
     // clang-format on
 
-    snprintf(eeprom_setting_video_flags, sizeof(eeprom_setting_video_flags), "Video Flags: 0x%08lx ", video_flags);
-    {
-        int index = 0;
-
-        const char *ratio;
-        if (video_flags & VIDEO_WIDESCREEN) {
-            ratio = "Widescreen";
-        } else if (video_flags & VIDEO_LETTERBOX) {
-            ratio = "Letterbox";
-        } else {
-            ratio = "Normal";
-        }
-        snprintf(eeprom_setting_video_aspect_ratio, sizeof(eeprom_setting_video_aspect_ratio), "  Aspect Ratio: %s", ratio);
-
-        index = 0;
-        index += snprintf(&eeprom_setting_video_refresh_rate[index], sizeof(eeprom_setting_video_refresh_rate) - index, "  Refresh Rate: ");
-        if ((video_flags & (VIDEO_50Hz | VIDEO_60Hz)) == 0) {
-            index += snprintf(&eeprom_setting_video_refresh_rate[index], sizeof(eeprom_setting_video_refresh_rate) - index, "Not set");
-        } else {
-            if (video_flags & VIDEO_50Hz) {
-                index += snprintf(&eeprom_setting_video_refresh_rate[index], sizeof(eeprom_setting_video_refresh_rate) - index, "50Hz");
-            }
-            if (video_flags & VIDEO_60Hz) {
-                if (video_flags & VIDEO_50Hz) {
-                    index += snprintf(&eeprom_setting_video_refresh_rate[index], sizeof(eeprom_setting_video_refresh_rate) - index, " / ");
-                }
-                index += snprintf(&eeprom_setting_video_refresh_rate[index], sizeof(eeprom_setting_video_refresh_rate) - index, "60Hz");
-            }
-        }
-
-        snprintf(eeprom_setting_video_enable_480p, sizeof(eeprom_setting_video_enable_480p), "    480p [%c]",
-                 (video_flags & VIDEO_MODE_480P) ? 'x' : ' ');
-
-        snprintf(eeprom_setting_video_enable_720p, sizeof(eeprom_setting_video_enable_720p), "    720p [%c]",
-                 (video_flags & VIDEO_MODE_720P) ? 'x' : ' ');
-
-        snprintf(eeprom_setting_video_enable_1080i, sizeof(eeprom_setting_video_enable_1080i), "    1080i [%c]",
-                 (video_flags & VIDEO_MODE_1080I) ? 'x' : ' ');
-    }
-
-    snprintf(eeprom_setting_audio_flags, sizeof(eeprom_setting_audio_flags), "Audio Flags: 0x%08lx ", audio_flags);
-    {
-        const char *channels;
-        if (audio_flags & AUDIO_FLAG_CHANNEL_MONO) {
-            channels = "Mono";
-        } else if (audio_flags & AUDIO_FLAG_CHANNEL_SURROUND) {
-            channels = "Surround";
-        } else {
-            channels = "Stereo";
-        }
-        snprintf(eeprom_setting_audio_channels, sizeof(eeprom_setting_audio_channels), "  Channels: %s", channels);
-
-        int index = 0;
-        index += snprintf(&eeprom_setting_audio_encoding[index], sizeof(eeprom_setting_audio_encoding) - index, "  Encoding: ");
-        if ((audio_flags & AUDIO_FLAG_ENCODING_MASK) == 0) {
-            index += snprintf(&eeprom_setting_audio_encoding[index], sizeof(eeprom_setting_audio_encoding) - index, " None");
-        } else {
-            if (audio_flags & AUDIO_FLAG_ENCODING_AC3) {
-                index += snprintf(&eeprom_setting_audio_encoding[index], sizeof(eeprom_setting_audio_encoding) - index, "AC3");
-            }
-            if (audio_flags & AUDIO_FLAG_ENCODING_DTS) {
-                if (audio_flags & AUDIO_FLAG_ENCODING_AC3) {
-                    index += snprintf(&eeprom_setting_audio_encoding[index], sizeof(eeprom_setting_audio_encoding) - index, " / ");
-                }
-                index += snprintf(&eeprom_setting_audio_encoding[index], sizeof(eeprom_setting_audio_encoding) - index, "DTS");
-            }
-        }
-    }
+    menu.item_count = line;
+    printf("pool_offset: %d, menu.item_count: %d\n", pool_offset, menu.item_count);
 }
 
 void menu_eeprom_activate(void)
