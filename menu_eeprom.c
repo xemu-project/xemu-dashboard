@@ -1,3 +1,5 @@
+#include <crypt/rc4.h>
+#include <crypt/sha1.h>
 #include <hal/video.h>
 #include <stdlib.h>
 #include <windows.h>
@@ -16,6 +18,7 @@ static unsigned char mac_address[6];
 static ULONG video_flags = 0;
 static ULONG audio_flags = 0;
 static ULONG av_region = 0;
+static ULONG game_region_index = 0;
 static int dirty = 0;
 
 // FIXME probably should be in nxdk
@@ -29,6 +32,10 @@ static int dirty = 0;
 #define AV_REGION_NTSCJ             0x00400200
 #define AV_REGION_PAL               0x00800300
 #define AV_REGION_PALM              0x00400400
+#define GAME_REGION_NA          0x00000001
+#define GAME_REGION_JAPAN       0x00000002
+#define GAME_REGION_EUROPE     0x00000004
+#define GAME_REGION_MANUFACTURING 0x80000000
 
 #define EEPROM_SMBUS_ADDRESS  0xA8
 #define EEPROM_FACTORY_OFFSET 0x30
@@ -84,6 +91,22 @@ static void apply_settings(void)
     }
 
     dirty = 0;
+    update_eeprom_text();
+}
+
+static void increment_game_region(void)
+{
+    static const ULONG regions[4] = {GAME_REGION_NA, GAME_REGION_JAPAN, GAME_REGION_EUROPE, GAME_REGION_MANUFACTURING};
+    int index = 0;
+    for (int i = 0; i < 4; i++) {
+        if (regions[i] == game_region_index) {
+            index = i;
+            index = (index + 1) % 4;
+            break;
+        }
+    }
+    game_region_index = regions[index];
+    dirty = 1;
     update_eeprom_text();
 }
 
@@ -227,6 +250,9 @@ static void query_eeprom(void)
     ExQueryNonVolatileSetting(XC_FACTORY_AV_REGION, &type, &data, sizeof(data), NULL);
     av_region = data;
 
+    ExQueryNonVolatileSetting(XC_FACTORY_GAME_REGION, &type, &data, sizeof(data), NULL);
+    game_region_index = data;
+
     ExQueryNonVolatileSetting(XC_FACTORY_ETHERNET_ADDR, &type, mac_address, sizeof(mac_address), NULL);
 }
 
@@ -260,6 +286,16 @@ static void update_eeprom_text(void)
     } else {
         push_line(line++, apply_settings, "Apply");
     }
+
+    const char *game_region;
+    switch (game_region_index) {
+        case 0x00000001: game_region = "North America"; break;
+        case 0x00000002: game_region = "Japan"; break;
+        case 0x00000004: game_region = "Europe and Australia"; break;
+        case 0x80000000: game_region = "Manufacturing"; break;
+        default: game_region = "Unknown";
+    }
+    push_line(line++, NULL, "Game Region: %s", game_region);
 
     // clang-format off
     const char *dvd_region;

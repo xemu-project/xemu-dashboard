@@ -79,6 +79,8 @@ jobs:
           echo
           echo "==== LICENSE for UbuntuMono-Regular.ttf ===="
           cat assets/LICENSE_ubuntu_mono
+          echo "==== LICENSE for SHA1/RC4 functions ===="
+          cat lib/crypt/LICENSE
         } > artifact/LICENSE
 
     - name: Upload artifact
