@@ -114,6 +114,11 @@ int main(void)
 
     SDL_Init(SDL_INIT_GAMECONTROLLER);
 
+    // Pseudo-random number generator seed
+    LARGE_INTEGER seed;
+    KeQuerySystemTime(&seed);
+    srand(seed.LowPart);
+
     // Create font texture for body text
     int final_height = 0;
     font_texture_bitmap = malloc(FONT_BITMAP_WIDTH * FONT_BITMAP_HEIGHT);
