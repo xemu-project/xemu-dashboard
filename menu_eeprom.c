@@ -21,22 +21,6 @@ static ULONG av_region = 0;
 static ULONG game_region_index = 0;
 static int dirty = 0;
 
-// FIXME probably should be in nxdk
-#define AUDIO_FLAG_ENCODING_AC3     0x00010000
-#define AUDIO_FLAG_ENCODING_DTS     0x00020000
-#define AUDIO_FLAG_ENCODING_MASK    (AUDIO_FLAG_ENCODING_AC3 | AUDIO_FLAG_ENCODING_DTS)
-#define AUDIO_FLAG_CHANNEL_MONO     0x00000001
-#define AUDIO_FLAG_CHANNEL_SURROUND 0x00000002
-#define AUDIO_FLAG_CHANNEL_MASK     (AUDIO_FLAG_CHANNEL_MONO | AUDIO_FLAG_CHANNEL_SURROUND)
-#define AV_REGION_NTSC              0x00400100
-#define AV_REGION_NTSCJ             0x00400200
-#define AV_REGION_PAL               0x00800300
-#define AV_REGION_PALM              0x00400400
-#define GAME_REGION_NA          0x00000001
-#define GAME_REGION_JAPAN       0x00000002
-#define GAME_REGION_EUROPE     0x00000004
-#define GAME_REGION_MANUFACTURING 0x80000000
-
 #define EEPROM_SMBUS_ADDRESS  0xA8
 #define EEPROM_FACTORY_OFFSET 0x30
 typedef struct
@@ -229,7 +213,7 @@ static void mac_address_generate(void)
     update_eeprom_text();
 }
 
-static MenuItem menu_items[32];
+static MenuItem menu_items[MAX_LINES];
 static Menu menu = {
     .item = menu_items,
     .item_count = sizeof(menu_items) / sizeof(MenuItem),
