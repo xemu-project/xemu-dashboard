@@ -12,6 +12,7 @@ static int pool_offset;
 
 static int dvd_region_index = 0;
 static int language_index = 0;
+static unsigned char mac_address[6];
 static ULONG video_flags = 0;
 static ULONG audio_flags = 0;
 static ULONG av_region = 0;
@@ -29,7 +30,35 @@ static int dirty = 0;
 #define AV_REGION_PAL               0x00800300
 #define AV_REGION_PALM              0x00400400
 
+#define EEPROM_SMBUS_ADDRESS  0xA8
+#define EEPROM_FACTORY_OFFSET 0x30
+typedef struct
+{
+    unsigned int checksum;           // 0x30
+    unsigned char serial_number[12]; // 0x34
+    unsigned char mac_address[6];    // 0x40
+    unsigned char padding1[2];       // 0x46
+    unsigned char online_key[16];    // 0x48
+    unsigned int av_region;          // 0x58
+    unsigned char padding2[4];       // 0x5C
+} eeprom_factory_settings_t;
+
 static void update_eeprom_text(void);
+
+// https://github.com/xemu-project/xemu/blob/9d5cf0926aa6f8eb2221e63a2e92bd86b02afae0/hw/xbox/eeprom_generation.c#L25
+static unsigned int xbox_eeprom_crc(unsigned char *data, unsigned int len)
+{
+    unsigned int high = 0;
+    unsigned int low = 0;
+    for (unsigned int i = 0; i < len / 4; i++) {
+        unsigned int val = ((unsigned int *)data)[i];
+        uint64_t sum = ((uint64_t)high << 32) | low;
+
+        high = (sum + val) >> 32;
+        low += val;
+    }
+    return ~(high + low);
+}
 
 static void apply_settings(void)
 {
@@ -38,7 +67,22 @@ static void apply_settings(void)
     ExSaveNonVolatileSetting(XC_LANGUAGE, type, &language_index, sizeof(language_index));
     ExSaveNonVolatileSetting(XC_VIDEO, type, &video_flags, sizeof(video_flags));
     ExSaveNonVolatileSetting(XC_AUDIO, type, &audio_flags, sizeof(audio_flags));
-    ExSaveNonVolatileSetting(XC_FACTORY_AV_REGION, type, &av_region, sizeof(av_region));
+
+    // Can't use ExSaveNonVolatileSetting for the factory settings,
+    // so we write it directly to the EEPROM and manually calculate the checksum for this region.
+    eeprom_factory_settings_t factory_settings;
+    unsigned char *factory_settings_ptr8 = (unsigned char *)&factory_settings;
+    for (unsigned int i = 0; i < sizeof(factory_settings); i++) {
+        HalReadSMBusValue(EEPROM_SMBUS_ADDRESS, EEPROM_FACTORY_OFFSET + i, FALSE, (ULONG *)(&factory_settings_ptr8[i]));
+    }
+    factory_settings.av_region = av_region;
+    memcpy(factory_settings.mac_address, mac_address, sizeof(factory_settings.mac_address));
+    factory_settings.checksum = xbox_eeprom_crc(&factory_settings_ptr8[4],
+                                                sizeof(factory_settings) - sizeof(factory_settings.checksum));
+    for (unsigned int i = 0; i < sizeof(factory_settings); i++) {
+        HalWriteSMBusValue(EEPROM_SMBUS_ADDRESS, EEPROM_FACTORY_OFFSET + i, FALSE, factory_settings_ptr8[i]);
+    }
+
     dirty = 0;
     update_eeprom_text();
 }
@@ -138,6 +182,30 @@ static void audio_increment_encoding(void)
     update_eeprom_text();
 }
 
+static void mac_address_generate(void)
+{
+    // One Xbox consoles the first byte of the MAC address is always 0x00,
+    // the second and third byte seem to be the same few patterns.
+    // The last three bytes are random.
+    mac_address[0] = 0x00;
+    int r = rand() % 3;
+    if (r == 0) {
+        mac_address[1] = 0x50;
+        mac_address[2] = 0xf2;
+    } else if (r == 1) {
+        mac_address[1] = 0x0d;
+        mac_address[2] = 0x3a;
+    } else {
+        mac_address[1] = 0x12;
+        mac_address[2] = 0x5a;
+    }
+    mac_address[3] = rand() % 256;
+    mac_address[4] = rand() % 256;
+    mac_address[5] = rand() % 256;
+    dirty = 1;
+    update_eeprom_text();
+}
+
 static MenuItem menu_items[32];
 static Menu menu = {
     .item = menu_items,
@@ -158,6 +226,8 @@ static void query_eeprom(void)
 
     ExQueryNonVolatileSetting(XC_FACTORY_AV_REGION, &type, &data, sizeof(data), NULL);
     av_region = data;
+
+    ExQueryNonVolatileSetting(XC_FACTORY_ETHERNET_ADDR, &type, mac_address, sizeof(mac_address), NULL);
 }
 
 static void push_line(int line, void *callback, const char *format, ...)
@@ -257,6 +327,10 @@ static void update_eeprom_text(void)
                 (audio_flags & AUDIO_FLAG_ENCODING_AC3) ? "AC3" :
                 (audio_flags & AUDIO_FLAG_ENCODING_DTS) ? "DTS" : "None");
     // clang-format on
+
+    push_line(line++, mac_address_generate, "MAC Address: %02x:%02x:%02x:%02x:%02x:%02x",
+              mac_address[0], mac_address[1], mac_address[2],
+              mac_address[3], mac_address[4], mac_address[5]);
 
     menu.item_count = line;
     printf("pool_offset: %d, menu.item_count: %d\n", pool_offset, menu.item_count);
