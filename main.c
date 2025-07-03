@@ -217,29 +217,31 @@ int main(void)
         // Render the header text
         text_draw(header_text_cdata, header_text, "xemu", X_MARGIN, HEADER_Y, &highlight_color);
 
-        char menu_text[64];
+        char menu_text_buffer[64];
 
         // Render the Xbox system local time
         SYSTEMTIME systemtime;
         GetLocalTime(&systemtime);
-        snprintf(menu_text, sizeof(menu_text), "%04d-%02d-%02d %02d:%02d:%02d", systemtime.wYear, systemtime.wMonth, systemtime.wDay,
+        snprintf(menu_text_buffer, sizeof(menu_text_buffer), "%04d-%02d-%02d %02d:%02d:%02d", systemtime.wYear, systemtime.wMonth, systemtime.wDay,
                  systemtime.wHour, systemtime.wMinute, systemtime.wSecond);
-        text_draw(body_text_cdata, body_text, menu_text, WINDOW_WIDTH - X_MARGIN - text_calculate_width(body_text_cdata, menu_text),
-                  HEADER_Y, &info_color);
+        text_draw(body_text_cdata, body_text, menu_text_buffer, WINDOW_WIDTH - X_MARGIN - text_calculate_width(body_text_cdata, menu_text_buffer),
+                  Y_MARGIN + BODY_FONT_SIZE + BODY_FONT_SIZE, &info_color);
 
         // Render footer text
-        snprintf(menu_text, sizeof(menu_text), "Waiting for a Xbox DVD");
-        text_draw(body_text_cdata, body_text, menu_text, WINDOW_WIDTH - X_MARGIN - text_calculate_width(body_text_cdata, menu_text),
+        snprintf(menu_text_buffer, sizeof(menu_text_buffer), "Waiting for a Xbox DVD");
+        text_draw(body_text_cdata, body_text, menu_text_buffer, WINDOW_WIDTH - X_MARGIN - text_calculate_width(body_text_cdata, menu_text_buffer),
                   FOOTER_Y, &text_color);
 
         char network_status[32];
         network_get_status(network_status, sizeof(network_status));
-        snprintf(menu_text, sizeof(menu_text), "FTP Server - %s", network_status);
-        text_draw(body_text_cdata, body_text, menu_text, WINDOW_WIDTH - X_MARGIN - text_calculate_width(body_text_cdata, menu_text),
+        snprintf(menu_text_buffer, sizeof(menu_text_buffer), "FTP Server - %s", network_status);
+        text_draw(body_text_cdata, body_text, menu_text_buffer, WINDOW_WIDTH - X_MARGIN - text_calculate_width(body_text_cdata, menu_text_buffer),
                   FOOTER_Y + BODY_FONT_SIZE, &text_color);
 
         // Render the build version
-        text_draw(body_text_cdata, body_text, GIT_VERSION, X_MARGIN, WINDOW_HEIGHT - Y_MARGIN, &info_color);
+        snprintf(menu_text_buffer, sizeof(menu_text_buffer), "%s", GIT_VERSION);
+        text_draw(body_text_cdata, body_text, menu_text_buffer, WINDOW_WIDTH - X_MARGIN - text_calculate_width(body_text_cdata, menu_text_buffer),
+                  Y_MARGIN + BODY_FONT_SIZE, &info_color);
 
         // Render the actual menu items
         render_menu();
