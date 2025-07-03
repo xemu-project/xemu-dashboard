@@ -19,6 +19,7 @@ static ULONG video_flags = 0;
 static ULONG audio_flags = 0;
 static ULONG av_region = 0;
 static ULONG game_region_index = 0;
+static int time_zone_offset = 0;
 static int dirty = 0;
 
 #define EEPROM_SMBUS_ADDRESS  0xA8
@@ -58,6 +59,7 @@ static void apply_settings(void)
     ExSaveNonVolatileSetting(XC_LANGUAGE, type, &language_index, sizeof(language_index));
     ExSaveNonVolatileSetting(XC_VIDEO, type, &video_flags, sizeof(video_flags));
     ExSaveNonVolatileSetting(XC_AUDIO, type, &audio_flags, sizeof(audio_flags));
+    ExSaveNonVolatileSetting(XC_TIMEZONE_BIAS, type, &time_zone_offset, sizeof(time_zone_offset));
 
     // Can't use ExSaveNonVolatileSetting for the factory settings,
     // so we write it directly to the EEPROM and manually calculate the checksum for this region.
@@ -213,6 +215,18 @@ static void mac_address_generate(void)
     update_eeprom_text();
 }
 
+static void increment_timezone_bios(void)
+{
+    // The time zone offset is in minutes, so we can increment it by 30 minutes at a time
+    // to account for time zones with 30 minute offsets.
+    time_zone_offset -= 30;
+    if (time_zone_offset < -720) { // -12 hours
+        time_zone_offset = 720; // wrap around to 12 hours
+    }
+    dirty = 1;
+    update_eeprom_text();
+}
+
 static MenuItem menu_items[MAX_LINES];
 static Menu menu = {
     .item = menu_items,
@@ -233,6 +247,9 @@ static void query_eeprom(void)
 
     ExQueryNonVolatileSetting(XC_FACTORY_AV_REGION, &type, &data, sizeof(data), NULL);
     av_region = data;
+
+    ExQueryNonVolatileSetting(XC_TIMEZONE_BIAS, &type, &data, sizeof(data), NULL);
+    time_zone_offset = data;
 
     ExQueryNonVolatileSetting(XC_FACTORY_GAME_REGION, &type, &data, sizeof(data), NULL);
     game_region_index = data;
@@ -351,6 +368,8 @@ static void update_eeprom_text(void)
     push_line(line++, mac_address_generate, "MAC Address: %02x:%02x:%02x:%02x:%02x:%02x",
               mac_address[0], mac_address[1], mac_address[2],
               mac_address[3], mac_address[4], mac_address[5]);
+
+    push_line(line++, increment_timezone_bios, "Time Zone Offset: %.1f hours", ((float)-time_zone_offset)/60.0f);
 
     menu.item_count = line;
     printf("pool_offset: %d, menu.item_count: %d\n", pool_offset, menu.item_count);
