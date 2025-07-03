@@ -152,6 +152,33 @@ int main(void)
     // Main menu always exists
     main_menu_activate();
 
+    // If storage space is below some % on any partition, show a warning
+    char warning_text[128];
+    const char *drive_letters[] = {"C:\\", "E:\\", "F:\\", "G:\\", "X:\\", "Y:\\", "Z:\\"};
+    Menu menu_warning = {
+        .item = (MenuItem *)&(MenuItem){warning_text, NULL},
+        .item_count = 1,
+        .selected_index = 0,
+        .scroll_offset = 0};
+    int char_offset = 0;
+    for (unsigned int i = 0; i < sizeof(drive_letters) / sizeof(drive_letters[0]); i++) {
+        ULARGE_INTEGER total_bytes, free_bytes;
+        if (GetDiskFreeSpaceEx(drive_letters[i], &free_bytes, &total_bytes, NULL)) {
+            ULONGLONG percent_free = ((free_bytes.QuadPart / 1024ULL) * 100ULL) / (total_bytes.QuadPart / 1024ULL);
+            if (percent_free < 5ULL) {
+                if (char_offset == 0) {
+                    char_offset += snprintf(&warning_text[char_offset], sizeof(warning_text) - char_offset, "Warning\nLow storage space on partitions:");
+                }
+                char_offset += snprintf(&warning_text[char_offset], sizeof(warning_text) - char_offset, " %c,", drive_letters[i][0]);
+            }
+        }
+    }
+    if (char_offset > 0) {
+        // Remove the last comma
+        warning_text[char_offset - 1] = '\0';
+        menu_push(&menu_warning);
+    }
+
     // Main running loop
     bool running = true;
     SDL_Event e;
