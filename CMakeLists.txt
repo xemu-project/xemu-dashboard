@@ -61,6 +61,12 @@ target_include_directories(xemu-dashboard PRIVATE ${SDL2_INCLUDE_DIRS})
 target_link_libraries(xemu-dashboard PUBLIC ${SDL2_LIBRARIES})
 target_link_directories(xemu-dashboard PUBLIC ${SDL2_LIBRARY_DIRS})
 
+add_library(xbox_crypt STATIC
+    lib/crypt/sha1.c
+    lib/crypt/rc4.c
+)
+target_link_libraries(xemu-dashboard PUBLIC xbox_crypt)
+
 # Bring in the git tag
 execute_process(
   COMMAND git describe --tags --dirty --always
