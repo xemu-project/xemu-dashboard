@@ -9,8 +9,16 @@ include(PrebuildNXDK)
 
 project(xemu-dashboard C CXX ASM)
 
+include(FetchContent)
+include(FetchContent)
+include(FindPkgConfig)
+
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release)
+endif()
+
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+  set(NXDK_DEBUG_FLAG "y" CACHE STRING "Enable debug build for the NXDK submodule. 'y' or 'n'.")
 endif()
 
 set(CMAKE_ASM_FLAGS_DEBUG "${CMAKE_ASM_FLAGS_DEBUG} -g -gdwarf-4")
@@ -22,9 +30,7 @@ set(CMAKE_ASM_FLAGS_RELEASE "${CMAKE_ASM_FLAGS_RELEASE} -O2")
 set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -O2")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O2")
 
-include(FetchContent)
-include(FindPkgConfig)
-pkg_search_module(SDL2 REQUIRED sdl2)
+add_compile_options($<$<AND:$<CONFIG:Debug>,$<COMPILE_LANGUAGE:C>>:-gdwarf-4>)
 
 add_definitions(-DXBOX -DNXDK -DSDL_DISABLE_JOYSTICK_INIT_DELAY -DFTP_CUSTOM_ROOT_PATH -DMEMP_NUM_NETBUF=6 -DMEMP_NUM_NETCONN=6)
 
@@ -34,10 +40,11 @@ add_executable(xemu-dashboard
     menu_system_info.c
     menu_eeprom.c
     menu_install_dash.c
-    dvd_autolaunch.c
-    network.c
-    text.c
-    renderer.c
+    support_dvd_autolaunch.c
+    support_network.c
+    support_text.c
+    support_renderer.c
+    support_updater.c lib/mbedtls/glue.c
     lib/ftpd/ftp_file.c lib/ftpd/ftp_server.c lib/ftpd/ftp.c
 )
 
@@ -57,6 +64,7 @@ target_include_directories(xemu-dashboard PRIVATE ${NXDK_DIR}/lib/net/lwip/src/i
 target_link_libraries(xemu-dashboard PUBLIC ${NXDK_DIR}/lib/libpbkit.lib)
 
 # Bring in SDL2 support
+pkg_search_module(SDL2 REQUIRED sdl2)
 target_include_directories(xemu-dashboard PRIVATE ${SDL2_INCLUDE_DIRS})
 target_link_libraries(xemu-dashboard PUBLIC ${SDL2_LIBRARIES})
 target_link_directories(xemu-dashboard PUBLIC ${SDL2_LIBRARY_DIRS})

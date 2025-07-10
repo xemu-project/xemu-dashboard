@@ -4,7 +4,7 @@
 #include <xgu/xgux.h>
 
 #include "main.h"
-#include "renderer.h"
+#include "support_renderer.h"
 
 int text_calculate_width(stbtt_bakedchar *cdata, const char *text)
 {
