@@ -90,6 +90,19 @@ FetchContent_MakeAvailable(mbedtls)
 target_include_directories(mbedx509 PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/lib/mbedtls)
 target_link_libraries(xemu-dashboard PUBLIC mbedtls ${CMAKE_SOURCE_DIR}/lib/mbedtls/ws2_32.lib)
 
+# Bring in llhttp support
+# llhttp is a HTTP parser used for handling HTTP requests in the dashboard.
+message(STATUS "Downloading llhttp")
+FetchContent_Declare(llhttp
+  URL "https://github.com/nodejs/llhttp/archive/refs/tags/release/v9.3.0.tar.gz"
+  DOWNLOAD_EXTRACT_TIMESTAMP TRUE)
+
+set(BUILD_SHARED_LIBS OFF CACHE INTERNAL "")
+set(BUILD_STATIC_LIBS ON CACHE INTERNAL "")
+FetchContent_MakeAvailable(llhttp)
+target_link_libraries(xemu-dashboard PUBLIC llhttp_static)
+
+# Bring in crpyto functions to support SHA1 and RC4
 add_library(xbox_crypt STATIC
     lib/crypt/sha1.c
     lib/crypt/rc4.c
