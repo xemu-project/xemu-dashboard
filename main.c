@@ -203,15 +203,29 @@ int main(void)
                     current_menu->selected_index = (current_menu->selected_index + 1) % current_menu->item_count;
 
                     // Skip if not a selectable item on the way down
-                    if (current_menu->item[current_menu->selected_index].callback == NULL) {
+                    while (current_menu->item[current_menu->selected_index].callback == NULL) {
                         current_menu->selected_index = (current_menu->selected_index + 1) % current_menu->item_count;
+                        if (current_menu->item[current_menu->selected_index].callback != NULL) {
+                            break;
+                        }
+                        if (current_menu->selected_index == 0) {
+                            current_menu->selected_index = 1 % current_menu->item_count;
+                            break;
+                        }
                     }
                 } else if (e.cbutton.button == SDL_CONTROLLER_BUTTON_DPAD_UP) {
                     current_menu->selected_index = (current_menu->selected_index - 1 + current_menu->item_count) % current_menu->item_count;
 
                     // Skip if not a selectable item on the way up
-                    if (current_menu->item[current_menu->selected_index].callback == NULL) {
+                    while (current_menu->item[current_menu->selected_index].callback == NULL) {
                         current_menu->selected_index = (current_menu->selected_index - 1 + current_menu->item_count) % current_menu->item_count;
+                        if (current_menu->item[current_menu->selected_index].callback != NULL) {
+                            break;
+                        }
+                        if (current_menu->selected_index == 0) {
+                            current_menu->selected_index = 1 % current_menu->item_count;
+                            break;
+                        }
                     }
                 } else if (e.cbutton.button == SDL_CONTROLLER_BUTTON_A) {
                     if (current_menu->item[current_menu->selected_index].callback) {
