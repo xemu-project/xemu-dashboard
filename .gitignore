@@ -1,2 +1,3 @@
 build
+assets/cacert.pem
 .vscode/settings.json
