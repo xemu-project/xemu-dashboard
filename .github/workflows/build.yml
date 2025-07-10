@@ -81,6 +81,10 @@ jobs:
           cat assets/LICENSE_ubuntu_mono
           echo "==== LICENSE for SHA1/RC4 functions ===="
           cat lib/crypt/LICENSE
+          echo "==== LICENSE for json parser ===="
+          cat lib/json/LICENSE
+          echo "==== LICENSE for mbedtls ===="
+          cat lib/mbedtls/LICENSE
         } > artifact/LICENSE
 
     - name: Upload artifact
