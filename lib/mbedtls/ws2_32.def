@@ -1,0 +1,7 @@
+LIBRARY ws2_32
+EXPORTS
+
+// Delete these lines when generating
+// mbledtls forces us to link ws2_32.lib which nxdk doesnt have currently.
+// I used this file to generate a stub library using this comment
+// llvm-lib /def:ws2_32.def /machine:x86 /out:ws2_32.lib
