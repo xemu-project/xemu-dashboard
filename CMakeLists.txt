@@ -90,6 +90,17 @@ execute_process(
 )
 add_compile_definitions(GIT_VERSION="${GIT_VERSION}")
 
+#Pre-build commands
+
+#Let's download the latest CA certificates
+message(STATUS "Downloading CA certificates...")
+file(DOWNLOAD
+    https://curl.se/ca/cacert.pem
+    ${CMAKE_SOURCE_DIR}/assets/cacert.pem
+    SHOW_PROGRESS
+    STATUS download_status
+)
+
 #Post-build commands
 file(MAKE_DIRECTORY ${XBOX_ISO_DIR})
 
