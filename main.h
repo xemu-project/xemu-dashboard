@@ -76,6 +76,11 @@ Menu *menu_pop(void);
 void network_initialise(void);
 void network_get_status(char *ip_address_buffer, char buffer_length);
 
+int downloader_init(void);
+void downloader_deinit(void);
+int downloader_check_update(char latest_version[64 + 1], char latest_sha[64 + 1], char **download_url);
+int downloader_download_update(char *download_url, void **mem, char **downloaded_data, int *downloaded_size, char downloaded_sha[64 + 1]);
+
 void autolaunch_dvd_runner(void);
 void main_menu_activate(void);
 
