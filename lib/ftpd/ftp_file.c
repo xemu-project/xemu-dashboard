@@ -163,7 +163,6 @@ FRESULT ftps_f_stat(const char *path, FILINFO *nfo)
 
 FRESULT ftps_f_opendir(DIR *dp, const char *path)
 {
-	char *p = NULL;
 	dp->h = INVALID_HANDLE_VALUE;
 	FILE_DBG("Opening directory %s\n", path);
 
@@ -178,7 +177,7 @@ FRESULT ftps_f_opendir(DIR *dp, const char *path)
 	}
 #endif
 
-	p = get_win_path(path, dp->path);
+	get_win_path(path, dp->path);
 
 	// Check that the directory exists
 	DWORD res = GetFileAttributesA(dp->path);
@@ -216,7 +215,7 @@ FRESULT ftps_f_readdir(DIR *dp, FILINFO *nfo)
 		// null terminate the filename in case we don't find anything
 		nfo->fname[0] = '\0';
 
-		for(; root_index < (sizeof(root_drives) / sizeof(root_drives[0])); root_index++)
+		for(; root_index < (int)(sizeof(root_drives) / sizeof(root_drives[0])); root_index++)
 		{
 			if(!nxIsDriveMounted(root_drives[root_index][1]))
 				continue;
@@ -304,6 +303,7 @@ static int async_writer_init = 1;
 
 static DWORD WINAPI async_writer_thread(LPVOID lpThreadParameter)
 {
+	(void)lpThreadParameter;
 	while (1)
 	{
 		WaitForSingleObject(async_writer_semaphore, INFINITE);
@@ -418,7 +418,7 @@ FRESULT ftps_f_close(FIL *fp)
 
 FRESULT ftps_f_write(FIL *fp, struct pbuf *p, uint32_t buflen, uint32_t *written)
 {
-	HANDLE hfile = fp->h;
+	(void)written;
 	FRESULT res = FR_OK;
 
 	// Write the correct amount of bytes to fill up to FILE_CACHE_SIZE exactly.
@@ -487,6 +487,8 @@ FRESULT ftps_f_rename(const char *from, const char *to)
 
 FRESULT ftps_f_utime(const char *path, const FILINFO *fno)
 {
+	(void)path;
+	(void)fno;
 	// http://elm-chan.org/fsw/ff/doc/utime.html
 	FILE_DBG("%s: NOT IMPLEMENTED\n", __FUNCTION__);
 	return FR_OK;
@@ -494,6 +496,9 @@ FRESULT ftps_f_utime(const char *path, const FILINFO *fno)
 
 FRESULT ftps_f_getfree(const char *path, uint32_t *nclst, void *fs)
 {
+	(void)path;
+	(void)fs;
+	(void)nclst;
 	// Not implemented
 	FILE_DBG("%s: NOT IMPLEMENTED\n", __FUNCTION__);
 	return FR_OK;
