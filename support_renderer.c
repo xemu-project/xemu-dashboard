@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <windows.h>
 
-#include "renderer.h"
+#include "support_renderer.h"
 
 static inline void shader_init();
 static inline void unlit_shader_apply();

@@ -15,7 +15,7 @@
 #include <xgu/xgux.h>
 
 #include "main.h"
-#include "renderer.h"
+#include "support_renderer.h"
 
 #ifndef GIT_VERSION
 #define GIT_VERSION ""

@@ -6,7 +6,7 @@
 #include <stb/stb_truetype.h>
 #include <windows.h>
 
-#include "renderer.h"
+#include "support_renderer.h"
 
 #define WINDOW_WIDTH       640
 #define WINDOW_HEIGHT      480

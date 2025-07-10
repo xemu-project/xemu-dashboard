@@ -25,7 +25,6 @@ static DWORD WINAPI network_thread(LPVOID lpParameter)
     nxNetInit(NULL);
     ftp_thread_handle = CreateThread(NULL, 0, ftp_thread, NULL, 0, NULL);
     SetThreadPriority(ftp_thread_handle, THREAD_PRIORITY_ABOVE_NORMAL);
-
     return 0;
 }
 
