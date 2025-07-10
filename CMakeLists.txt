@@ -75,6 +75,13 @@ add_library(xbox_crypt STATIC
 )
 target_link_libraries(xemu-dashboard PUBLIC xbox_crypt)
 
+# Bring in JSON parser support
+add_library(json STATIC
+    lib/json/json.c
+    lib/json/json.h
+)
+target_link_libraries(xemu-dashboard PUBLIC json)
+
 # Bring in the git tag
 execute_process(
   COMMAND git describe --tags --dirty --always
