@@ -84,6 +84,7 @@ static void ftp_send(ftp_data_t *ftp, const char *fmt, ...)
 
 static char *data_time_to_str(char *str, uint16_t date, uint16_t time)
 {
+	(void)time;
 	static const char *month_str[] =
 	{
 		"Jan", "Feb" , "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
