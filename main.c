@@ -6,6 +6,7 @@
 #include <hal/video.h>
 #include <hal/xbox.h>
 #include <nxdk/mount.h>
+#include <hal/debug.h>
 #include <nxdk/path.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -292,6 +293,7 @@ int main(void)
     }
 
     cleanup();
+    HalReturnToFirmware(HalRebootRoutine);
     return 0;
 }
 
@@ -388,5 +390,6 @@ static void cleanup(void)
     pb_kill();
     nvnetdrv_stop();
     usbh_core_deinit();
+    debugClearScreen();
     SDL_Quit();
 }
