@@ -8,9 +8,11 @@ Set the following: `xemu Settings > System > Hard Disk` to point the [xbox_hdd.q
 2. System information screen that shows some parameters of the Xbox hardware being emulated.
 3. EEPROM settings page to adjust parameters without external tools or having to install Microsoft Dashboard.
 4. Autolaunches Xbox ISO images if detected.
+5. Easy online updater.
 
 ## Updating
-Until automatic updates are implemented, the easiest way to update to the latest version is to download the pre-built [xiso image](https://github.com/xemu-project/xemu-dashboard/releases/latest/download/xemu-dashboard.iso), load it as a disc in xemu then hit `Install` through the dashboard.
+1. Offine: Download the pre-built [xiso image](https://github.com/xemu-project/xemu-dashboard/releases/latest/download/xemu-dashboard.iso), load it as a disc in xemu then hit `Install` through the dashboard.
+2. Online: Goto to `Install` menu and use the online updater to grab the latest release from the repository.
 
 ## Compilation
 From someplace on your system, clone the [nxdk](https://github.com/XboxDev/nxdk)
