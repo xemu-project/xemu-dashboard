@@ -36,6 +36,7 @@ typedef struct
 } eeprom_factory_settings_t;
 
 static void update_eeprom_text(void);
+static void query_eeprom(void);
 
 // https://github.com/xemu-project/xemu/blob/9d5cf0926aa6f8eb2221e63a2e92bd86b02afae0/hw/xbox/eeprom_generation.c#L25
 static unsigned int xbox_eeprom_crc(unsigned char *data, unsigned int len)
@@ -52,8 +53,48 @@ static unsigned int xbox_eeprom_crc(unsigned char *data, unsigned int len)
     return ~(high + low);
 }
 
+static void restore_backup()
+{
+    HANDLE eeprom_file = CreateFileA("E:\\eeprom.bin", GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (eeprom_file != INVALID_HANDLE_VALUE) {
+        unsigned char eeprom_data[256];
+        DWORD bytes_read;
+        ReadFile(eeprom_file, eeprom_data, sizeof(eeprom_data), &bytes_read, NULL);
+        CloseHandle(eeprom_file);
+
+        for (unsigned int i = 0; i < sizeof(eeprom_data); i++) {
+            HalWriteSMBusValue(EEPROM_SMBUS_ADDRESS, i, FALSE, eeprom_data[i]);
+        }
+
+        query_eeprom();
+        update_eeprom_text();
+        dirty = 0;
+
+        static MenuItem menu_item = {"Backup restored successfully", NULL};
+        static Menu menu = {
+            .item = &menu_item,
+            .item_count = 1,
+            .selected_index = 0,
+            .scroll_offset = 0};
+        menu_push(&menu);
+    }
+}
+
 static void apply_settings(void)
 {
+    // First create a full backup of the EEPROM to E:\\eeprom.bin
+    SetFileAttributesA("E:\\eeprom.bin", FILE_ATTRIBUTE_NORMAL);
+    HANDLE eeprom_file = CreateFileA("E:\\eeprom.bin", GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (eeprom_file != INVALID_HANDLE_VALUE) {
+        unsigned char eeprom_data[256];
+        for (unsigned int i = 0; i < sizeof(eeprom_data); i++) {
+            HalReadSMBusValue(EEPROM_SMBUS_ADDRESS, i, FALSE, (ULONG *)&eeprom_data[i]);
+        }
+        DWORD bytes_written;
+        WriteFile(eeprom_file, eeprom_data, sizeof(eeprom_data), &bytes_written, NULL);
+        CloseHandle(eeprom_file);
+    }
+
     ULONG type = 4;
     ExSaveNonVolatileSetting(XC_DVD_REGION, type, &dvd_region_index, sizeof(dvd_region_index));
     ExSaveNonVolatileSetting(XC_LANGUAGE, type, &language_index, sizeof(language_index));
@@ -221,7 +262,7 @@ static void increment_timezone_bios(void)
     // to account for time zones with 30 minute offsets.
     time_zone_offset -= 30;
     if (time_zone_offset < -720) { // -12 hours
-        time_zone_offset = 720; // wrap around to 12 hours
+        time_zone_offset = 720;    // wrap around to 12 hours
     }
     dirty = 1;
     update_eeprom_text();
@@ -287,6 +328,10 @@ static void update_eeprom_text(void)
     } else {
         push_line(line++, apply_settings, "Apply");
     }
+
+    DWORD fileAttr = GetFileAttributesA("E:\\eeprom.bin");
+    const BOOL eeprom_backup_exists = (fileAttr != INVALID_FILE_ATTRIBUTES && !(fileAttr & FILE_ATTRIBUTE_DIRECTORY));
+    push_line(line++, (eeprom_backup_exists) ? restore_backup : NULL, "Restore EEPROM Backup");
 
     const char *game_region;
     switch (game_region_index) {
@@ -369,14 +414,14 @@ static void update_eeprom_text(void)
               mac_address[0], mac_address[1], mac_address[2],
               mac_address[3], mac_address[4], mac_address[5]);
 
-    push_line(line++, increment_timezone_bios, "Time Zone Offset: %.1f hours", ((float)-time_zone_offset)/60.0f);
+    push_line(line++, increment_timezone_bios, "Time Zone Offset: %.1f hours", ((float)-time_zone_offset) / 60.0f);
 
     menu.item_count = line;
-    printf("pool_offset: %d, menu.item_count: %d\n", pool_offset, menu.item_count);
 }
 
 void menu_eeprom_activate(void)
 {
+    dirty = 0;
     query_eeprom();
     update_eeprom_text();
 
