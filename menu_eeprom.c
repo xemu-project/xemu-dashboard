@@ -1,57 +1,28 @@
-#include <crypt/rc4.h>
-#include <crypt/sha1.h>
 #include <hal/video.h>
 #include <stdlib.h>
 #include <windows.h>
+#include <xbox_eeprom.h>
 #include <xboxkrnl/xboxkrnl.h>
 
 #include "main.h"
 
 #define MAX_LINES      32
-#define MAX_CHARACTERS 512
+#define MAX_CHARACTERS 1024
 static char char_pool[MAX_CHARACTERS];
 static int pool_offset;
 
-static int dvd_region_index = 0;
-static int language_index = 0;
-static unsigned char mac_address[6];
-static ULONG video_flags = 0;
-static ULONG audio_flags = 0;
-static ULONG av_region = 0;
-static ULONG game_region_index = 0;
-static int time_zone_offset = 0;
 static int dirty = 0;
+static char eeprom_version;
 
-#define EEPROM_SMBUS_ADDRESS  0xA8
-#define EEPROM_FACTORY_OFFSET 0x30
-typedef struct
-{
-    unsigned int checksum;           // 0x30
-    unsigned char serial_number[12]; // 0x34
-    unsigned char mac_address[6];    // 0x40
-    unsigned char padding1[2];       // 0x46
-    unsigned char online_key[16];    // 0x48
-    unsigned int av_region;          // 0x58
-    unsigned char padding2[4];       // 0x5C
-} eeprom_factory_settings_t;
+#define EEPROM_SMBUS_ADDRESS 0xA8
+#define AUDIO_FLAG_ENCODING_MASK (XBOX_EEPROM_AUDIO_SETTINGS_ENABLE_AC3 | XBOX_EEPROM_AUDIO_SETTINGS_ENABLE_DTS)
+#define AUDIO_FLAG_CHANNEL_MASK  (XBOX_EEPROM_AUDIO_SETTINGS_MONO | XBOX_EEPROM_AUDIO_SETTINGS_SURROUND)
+
+static xbox_eeprom_t encrypted_eeprom;
+static xbox_eeprom_t eeprom;
 
 static void update_eeprom_text(void);
 static void query_eeprom(void);
-
-// https://github.com/xemu-project/xemu/blob/9d5cf0926aa6f8eb2221e63a2e92bd86b02afae0/hw/xbox/eeprom_generation.c#L25
-static unsigned int xbox_eeprom_crc(unsigned char *data, unsigned int len)
-{
-    unsigned int high = 0;
-    unsigned int low = 0;
-    for (unsigned int i = 0; i < len / 4; i++) {
-        unsigned int val = ((unsigned int *)data)[i];
-        uint64_t sum = ((uint64_t)high << 32) | low;
-
-        high = (sum + val) >> 32;
-        low += val;
-    }
-    return ~(high + low);
-}
 
 static void restore_backup()
 {
@@ -86,96 +57,80 @@ static void apply_settings(void)
     SetFileAttributesA("E:\\eeprom.bin", FILE_ATTRIBUTE_NORMAL);
     HANDLE eeprom_file = CreateFileA("E:\\eeprom.bin", GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
     if (eeprom_file != INVALID_HANDLE_VALUE) {
-        unsigned char eeprom_data[256];
-        for (unsigned int i = 0; i < sizeof(eeprom_data); i++) {
-            HalReadSMBusValue(EEPROM_SMBUS_ADDRESS, i, FALSE, (ULONG *)&eeprom_data[i]);
-        }
         DWORD bytes_written;
-        WriteFile(eeprom_file, eeprom_data, sizeof(eeprom_data), &bytes_written, NULL);
+        WriteFile(eeprom_file, &encrypted_eeprom, sizeof(encrypted_eeprom), &bytes_written, NULL);
         CloseHandle(eeprom_file);
     }
 
-    ULONG type = 4;
-    ExSaveNonVolatileSetting(XC_DVD_REGION, type, &dvd_region_index, sizeof(dvd_region_index));
-    ExSaveNonVolatileSetting(XC_LANGUAGE, type, &language_index, sizeof(language_index));
-    ExSaveNonVolatileSetting(XC_VIDEO, type, &video_flags, sizeof(video_flags));
-    ExSaveNonVolatileSetting(XC_AUDIO, type, &audio_flags, sizeof(audio_flags));
-    ExSaveNonVolatileSetting(XC_TIMEZONE_BIAS, type, &time_zone_offset, sizeof(time_zone_offset));
+    xbox_eeprom_encrypt(0x0A, &eeprom, &encrypted_eeprom);
 
-    // Can't use ExSaveNonVolatileSetting for the factory settings,
-    // so we write it directly to the EEPROM and manually calculate the checksum for this region.
-    eeprom_factory_settings_t factory_settings;
-    unsigned char *factory_settings_ptr8 = (unsigned char *)&factory_settings;
-    for (unsigned int i = 0; i < sizeof(factory_settings); i++) {
-        HalReadSMBusValue(EEPROM_SMBUS_ADDRESS, EEPROM_FACTORY_OFFSET + i, FALSE, (ULONG *)(&factory_settings_ptr8[i]));
-    }
-    factory_settings.av_region = av_region;
-    memcpy(factory_settings.mac_address, mac_address, sizeof(factory_settings.mac_address));
-    factory_settings.checksum = xbox_eeprom_crc(&factory_settings_ptr8[4],
-                                                sizeof(factory_settings) - sizeof(factory_settings.checksum));
-    for (unsigned int i = 0; i < sizeof(factory_settings); i++) {
-        HalWriteSMBusValue(EEPROM_SMBUS_ADDRESS, EEPROM_FACTORY_OFFSET + i, FALSE, factory_settings_ptr8[i]);
+    // Write the encrypted EEPROM back to the Xbox
+    for (unsigned int i = 0; i < sizeof(encrypted_eeprom); i++) {
+        HalWriteSMBusValue(EEPROM_SMBUS_ADDRESS, i, FALSE, ((unsigned char *)&encrypted_eeprom)[i]);
     }
 
     dirty = 0;
+    query_eeprom();
     update_eeprom_text();
 }
 
-static void increment_game_region(void)
+static void increment_xbox_region(void)
 {
-    static const ULONG regions[4] = {GAME_REGION_NA, GAME_REGION_JAPAN, GAME_REGION_EUROPE, GAME_REGION_MANUFACTURING};
+    static const ULONG regions[4] = {XBOX_EEPROM_XBOX_REGION_NA, XBOX_EEPROM_XBOX_REGION_JP,
+                                     XBOX_EEPROM_XBOX_REGION_EU, XBOX_EEPROM_XBOX_REGION_MANUFACTURING};
     int index = 0;
     for (int i = 0; i < 4; i++) {
-        if (regions[i] == game_region_index) {
+        if (regions[i] == eeprom.encrypted.xbox_region) {
             index = i;
             index = (index + 1) % 4;
             break;
         }
     }
-    game_region_index = regions[index];
+    eeprom.encrypted.xbox_region = regions[index];
     dirty = 1;
     update_eeprom_text();
 }
 
 static void increment_dvd_region(void)
 {
-    dvd_region_index = (dvd_region_index + 1) % 7;
+    eeprom.user.dvd_region = (eeprom.user.dvd_region + 1) % 7;
     dirty = 1;
     update_eeprom_text();
 }
 
 static void increment_language(void)
 {
-    language_index = (language_index + 1) % 10;
+    eeprom.user.language = (eeprom.user.language + 1) % 10;
     dirty = 1;
     update_eeprom_text();
 }
 
 static void increment_video_region(void)
 {
-    static const ULONG regions[4] = {AV_REGION_NTSC, AV_REGION_PAL, AV_REGION_NTSCJ, AV_REGION_PALM};
+    static const ULONG regions[4] = {XBOX_EEPROM_VIDEO_STANDARD_NTSC_M, XBOX_EEPROM_VIDEO_STANDARD_PAL,
+                                     XBOX_EEPROM_VIDEO_STANDARD_NTSC_J, XBOX_EEPROM_VIDEO_STANDARD_PAL_M};
     int index = 0;
     for (int i = 0; i < 4; i++) {
-        if (regions[i] == av_region) {
+        if (regions[i] == eeprom.factory.video_standard) {
             index = i;
             index = (index + 1) % 4;
             break;
         }
     }
-    av_region = regions[index];
+    eeprom.factory.video_standard = regions[index];
     dirty = 1;
     update_eeprom_text();
 }
 
 static void video_increment_aspect_ratio(void)
 {
-    if (video_flags & VIDEO_WIDESCREEN) {
-        video_flags &= ~VIDEO_WIDESCREEN;
-        video_flags |= VIDEO_LETTERBOX;
-    } else if (video_flags & VIDEO_LETTERBOX) {
-        video_flags &= ~VIDEO_LETTERBOX;
+    if (eeprom.user.video_settings & VIDEO_WIDESCREEN) {
+        eeprom.user.video_settings &= ~VIDEO_WIDESCREEN;
+        eeprom.user.video_settings |= VIDEO_LETTERBOX;
+    } else if (eeprom.user.video_settings & VIDEO_LETTERBOX) {
+        eeprom.user.video_settings &= ~VIDEO_LETTERBOX;
     } else {
-        video_flags |= VIDEO_WIDESCREEN;
+        eeprom.user.video_settings |= VIDEO_WIDESCREEN;
     }
     dirty = 1;
     update_eeprom_text();
@@ -183,51 +138,51 @@ static void video_increment_aspect_ratio(void)
 
 static void video_increment_refresh_rate(void)
 {
-    ULONG index = (video_flags >> 22) & 0x03;
+    ULONG index = (eeprom.user.video_settings >> 22) & 0x03;
     index = (index + 1) % 4;
-    video_flags &= ~(VIDEO_50Hz | VIDEO_60Hz);
-    video_flags |= index << 22;
+    eeprom.user.video_settings &= ~(VIDEO_50Hz | VIDEO_60Hz);
+    eeprom.user.video_settings |= index << 22;
     dirty = 1;
     update_eeprom_text();
 }
 
 static void video_toggle_480p(void)
 {
-    video_flags ^= VIDEO_MODE_480P;
+    eeprom.user.video_settings ^= VIDEO_MODE_480P;
     dirty = 1;
     update_eeprom_text();
 }
 
 static void video_toggle_720p(void)
 {
-    video_flags ^= VIDEO_MODE_720P;
+    eeprom.user.video_settings ^= VIDEO_MODE_720P;
     dirty = 1;
     update_eeprom_text();
 }
 
 static void video_toggle_1080i(void)
 {
-    video_flags ^= VIDEO_MODE_1080I;
+    eeprom.user.video_settings ^= VIDEO_MODE_1080I;
     dirty = 1;
     update_eeprom_text();
 }
 
 static void audio_increment_channel(void)
 {
-    ULONG index = (audio_flags & AUDIO_FLAG_CHANNEL_MASK) >> 0;
+    ULONG index = (eeprom.user.audio_settings & AUDIO_FLAG_CHANNEL_MASK) >> 0;
     index = (index + 1) % 3;
-    audio_flags &= ~AUDIO_FLAG_CHANNEL_MASK;
-    audio_flags |= index << 0;
+    eeprom.user.audio_settings &= ~AUDIO_FLAG_CHANNEL_MASK;
+    eeprom.user.audio_settings |= index << 0;
     dirty = 1;
     update_eeprom_text();
 }
 
 static void audio_increment_encoding(void)
 {
-    ULONG index = (audio_flags & AUDIO_FLAG_ENCODING_MASK) >> 16;
+    ULONG index = (eeprom.user.audio_settings & AUDIO_FLAG_ENCODING_MASK) >> 16;
     index = (index + 1) % 4;
-    audio_flags &= ~AUDIO_FLAG_ENCODING_MASK;
-    audio_flags |= index << 16;
+    eeprom.user.audio_settings &= ~AUDIO_FLAG_ENCODING_MASK;
+    eeprom.user.audio_settings |= index << 16;
     dirty = 1;
     update_eeprom_text();
 }
@@ -237,21 +192,21 @@ static void mac_address_generate(void)
     // One Xbox consoles the first byte of the MAC address is always 0x00,
     // the second and third byte seem to be the same few patterns.
     // The last three bytes are random.
-    mac_address[0] = 0x00;
+    eeprom.factory.mac_address[0] = 0x00;
     int r = rand() % 3;
     if (r == 0) {
-        mac_address[1] = 0x50;
-        mac_address[2] = 0xf2;
+        eeprom.factory.mac_address[1] = 0x50;
+        eeprom.factory.mac_address[2] = 0xf2;
     } else if (r == 1) {
-        mac_address[1] = 0x0d;
-        mac_address[2] = 0x3a;
+        eeprom.factory.mac_address[1] = 0x0d;
+        eeprom.factory.mac_address[2] = 0x3a;
     } else {
-        mac_address[1] = 0x12;
-        mac_address[2] = 0x5a;
+        eeprom.factory.mac_address[1] = 0x12;
+        eeprom.factory.mac_address[2] = 0x5a;
     }
-    mac_address[3] = rand() % 256;
-    mac_address[4] = rand() % 256;
-    mac_address[5] = rand() % 256;
+    eeprom.factory.mac_address[3] = rand() % 256;
+    eeprom.factory.mac_address[4] = rand() % 256;
+    eeprom.factory.mac_address[5] = rand() % 256;
     dirty = 1;
     update_eeprom_text();
 }
@@ -260,10 +215,28 @@ static void increment_timezone_bios(void)
 {
     // The time zone offset is in minutes, so we can increment it by 30 minutes at a time
     // to account for time zones with 30 minute offsets.
-    time_zone_offset -= 30;
-    if (time_zone_offset < -720) { // -12 hours
-        time_zone_offset = 720;    // wrap around to 12 hours
+    eeprom.user.timezone_bias -= 30;
+    if (eeprom.user.timezone_bias < -720) { // -12 hours
+        eeprom.user.timezone_bias = 720;    // wrap around to 12 hours
     }
+    dirty = 1;
+    update_eeprom_text();
+}
+
+static void generate_serial_number(void)
+{
+    char production_line = rand() % 10;                       // 0-9
+    int week_production = (rand() | (rand() << 16)) % 200000; // 0-1999999
+    int production_year = (rand() % 5) + 1;                   // 1-5
+    int production_week = (rand() % 52) + 1;                  // 1-52
+    char factory_id = ((char[]){2, 3, 5, 6})[rand() % 4];
+
+    char serial_number[13];
+    snprintf(serial_number, sizeof(serial_number), "%1d%06d%1d%02d%02d",
+             production_line, week_production, production_year, production_week, factory_id);
+
+    memcpy(eeprom.factory.serial_number, serial_number, sizeof(eeprom.factory.serial_number));
+
     dirty = 1;
     update_eeprom_text();
 }
@@ -276,26 +249,12 @@ static Menu menu = {
 
 static void query_eeprom(void)
 {
-    ULONG data, type;
-    ExQueryNonVolatileSetting(XC_DVD_REGION, &type, &data, sizeof(data), NULL);
-    dvd_region_index = data & 0xFF;
-
-    ExQueryNonVolatileSetting(XC_LANGUAGE, &type, &data, sizeof(data), NULL);
-    language_index = data & 0xFF;
-
-    ExQueryNonVolatileSetting(XC_VIDEO, &type, &data, sizeof(data), NULL);
-    video_flags = data;
-
-    ExQueryNonVolatileSetting(XC_FACTORY_AV_REGION, &type, &data, sizeof(data), NULL);
-    av_region = data;
-
-    ExQueryNonVolatileSetting(XC_TIMEZONE_BIAS, &type, &data, sizeof(data), NULL);
-    time_zone_offset = data;
-
-    ExQueryNonVolatileSetting(XC_FACTORY_GAME_REGION, &type, &data, sizeof(data), NULL);
-    game_region_index = data;
-
-    ExQueryNonVolatileSetting(XC_FACTORY_ETHERNET_ADDR, &type, mac_address, sizeof(mac_address), NULL);
+    // Read in the encrypted EEPROM from the Xbox
+    for (unsigned int i = 0; i < sizeof(encrypted_eeprom); i++) {
+        HalReadSMBusValue(EEPROM_SMBUS_ADDRESS, i, FALSE, (ULONG *)&((unsigned char *)&encrypted_eeprom)[i]);
+    }
+    // Decrypt the EEPROM
+    eeprom_version = xbox_eeprom_decrypt(&encrypted_eeprom, &eeprom);
 }
 
 static void push_line(int line, void *callback, const char *format, ...)
@@ -333,19 +292,35 @@ static void update_eeprom_text(void)
     const BOOL eeprom_backup_exists = (fileAttr != INVALID_FILE_ATTRIBUTES && !(fileAttr & FILE_ATTRIBUTE_DIRECTORY));
     push_line(line++, (eeprom_backup_exists) ? restore_backup : NULL, "Restore EEPROM Backup");
 
-    const char *game_region;
-    switch (game_region_index) {
-        case 0x00000001: game_region = "North America"; break;
-        case 0x00000002: game_region = "Japan"; break;
-        case 0x00000004: game_region = "Europe and Australia"; break;
-        case 0x80000000: game_region = "Manufacturing"; break;
-        default: game_region = "Unknown";
-    }
-    push_line(line++, NULL, "Game Region: %s", game_region);
-
     // clang-format off
+    const char *eeprom_version_str = "Unknown";
+    switch (eeprom_version) {
+        case 0x09: eeprom_version_str = "Debug Xbox"; break;
+        case 0x0A: eeprom_version_str = "Xbox 1.0"; break;
+        case 0x0B: eeprom_version_str = "Xbox 1.1 to 1.5"; break;
+        case 0x0C: eeprom_version_str = "Xbox 1.6"; break;
+        default: eeprom_version_str = "Unknown"; break;
+    }
+    push_line(line++, NULL, "EEPROM Version: %s", eeprom_version_str);
+
+    char hdd_key[33];
+    for (int i = 0; i < 16; i++) {
+        snprintf(&hdd_key[i * 2], sizeof(hdd_key) - i * 2, "%02x", eeprom.encrypted.hdd_key[i]);
+    }
+    push_line(line++, NULL, "HDD Key: %s", hdd_key);
+
+    const char *xbox_region;
+    switch (eeprom.encrypted.xbox_region) {
+        case XBOX_EEPROM_XBOX_REGION_NA: xbox_region = "North America"; break;
+        case XBOX_EEPROM_XBOX_REGION_JP: xbox_region = "Japan"; break;
+        case XBOX_EEPROM_XBOX_REGION_EU: xbox_region = "Europe and Australia"; break;
+        case XBOX_EEPROM_XBOX_REGION_MANUFACTURING: xbox_region = "Manufacturing"; break;
+        default: xbox_region = "Unknown";
+    }
+    push_line(line++, increment_xbox_region, "Game Region: %s", xbox_region);
+
     const char *dvd_region;
-    switch (dvd_region_index) {
+    switch (eeprom.user.dvd_region) {
         case 0: dvd_region = "0 None"; break;
         case 1: dvd_region = "1 USA, Canada"; break;
         case 2: dvd_region = "2 Europe, Japan, Middle East"; break;
@@ -358,7 +333,7 @@ static void update_eeprom_text(void)
     push_line(line++, increment_dvd_region, "DVD Region: %s", dvd_region);
 
     const char *language;
-    switch (language_index) {
+    switch (eeprom.user.language) {
         case 0: language = "0 Not Set"; break;
         case 1: language = "1 English"; break;
         case 2: language = "2 Japanese"; break;
@@ -374,47 +349,49 @@ static void update_eeprom_text(void)
     push_line(line++, increment_language, "Language: %s", language);
 
     const char *region;
-    switch (av_region) {
-        case AV_REGION_NTSC: region = "NTSC"; break;
-        case AV_REGION_NTSCJ: region = "NTSC Japan"; break;
-        case AV_REGION_PAL: region = "PAL"; break;
-        case AV_REGION_PALM: region = "PAL Brazil"; break;
+    switch (eeprom.factory.video_standard) {
+        case XBOX_EEPROM_VIDEO_STANDARD_NTSC_M: region = "NTSC"; break;
+        case XBOX_EEPROM_VIDEO_STANDARD_NTSC_J: region = "NTSC Japan"; break;
+        case XBOX_EEPROM_VIDEO_STANDARD_PAL: region = "PAL"; break;
+        case XBOX_EEPROM_VIDEO_STANDARD_PAL_M: region = "PAL Brazil"; break;
         default: region = "Invalid Region";
     }
     push_line(line++, increment_video_region, "Video Region: %s", region);
 
-    push_line(line++, NULL, "Video Flags: 0x%08lx", video_flags);
+    push_line(line++, NULL, "Video Flags: 0x%08lx", eeprom.user.video_settings);
 
     push_line(line++, video_increment_aspect_ratio, "  Aspect Ratio: %s",
-                   (video_flags & VIDEO_WIDESCREEN) ? "Widescreen" :
-                   (video_flags & VIDEO_LETTERBOX) ? "Letterbox" : "Normal");
+                   (eeprom.user.video_settings & VIDEO_WIDESCREEN) ? "Widescreen" :
+                   (eeprom.user.video_settings & VIDEO_LETTERBOX) ? "Letterbox" : "Normal");
 
     push_line(line++, video_increment_refresh_rate, "  Refresh Rate: %s",
-                   (video_flags & VIDEO_50Hz && video_flags & VIDEO_60Hz) ? "50Hz / 60Hz" :
-                   (video_flags & VIDEO_50Hz) ? "50Hz" :
-                   (video_flags & VIDEO_60Hz) ? "60Hz" : "Not set");
+                   (eeprom.user.video_settings & VIDEO_50Hz && eeprom.user.video_settings & VIDEO_60Hz) ? "50Hz / 60Hz" :
+                   (eeprom.user.video_settings & VIDEO_50Hz) ? "50Hz" :
+                   (eeprom.user.video_settings & VIDEO_60Hz) ? "60Hz" : "Not set");
 
-    push_line(line++, video_toggle_480p, "  480p: [%c]", (video_flags & VIDEO_MODE_480P) ? 'x' : ' ');
-    push_line(line++, video_toggle_720p, "  720p: [%c]", (video_flags & VIDEO_MODE_720P) ? 'x' : ' ');
-    push_line(line++, video_toggle_1080i, "  1080i: [%c]", (video_flags & VIDEO_MODE_1080I) ? 'x' : ' ');
+    push_line(line++, video_toggle_480p, "  480p: [%c]", (eeprom.user.video_settings & VIDEO_MODE_480P) ? 'x' : ' ');
+    push_line(line++, video_toggle_720p, "  720p: [%c]", (eeprom.user.video_settings & VIDEO_MODE_720P) ? 'x' : ' ');
+    push_line(line++, video_toggle_1080i, "  1080i: [%c]", (eeprom.user.video_settings & VIDEO_MODE_1080I) ? 'x' : ' ');
 
-    push_line(line++, NULL, "Audio Flags: 0x%08lx", audio_flags);
+    push_line(line++, NULL, "Audio Flags: 0x%08lx", eeprom.user.audio_settings);
 
     push_line(line++, audio_increment_channel, "  Channel Configuration: %s",
-                (audio_flags & AUDIO_FLAG_CHANNEL_MONO) ? "Mono" :
-                (audio_flags & AUDIO_FLAG_CHANNEL_SURROUND) ? "Surround" : "Stereo");
+                (eeprom.user.audio_settings & XBOX_EEPROM_AUDIO_SETTINGS_MONO) ? "Mono" :
+                (eeprom.user.audio_settings & XBOX_EEPROM_AUDIO_SETTINGS_SURROUND) ? "Surround" : "Stereo");
 
     push_line(line++, audio_increment_encoding, "  Encoding: %s",
-                (audio_flags & AUDIO_FLAG_ENCODING_AC3 && audio_flags & AUDIO_FLAG_ENCODING_DTS) ? "AC3 / DTS" :
-                (audio_flags & AUDIO_FLAG_ENCODING_AC3) ? "AC3" :
-                (audio_flags & AUDIO_FLAG_ENCODING_DTS) ? "DTS" : "None");
+                (eeprom.user.audio_settings & XBOX_EEPROM_AUDIO_SETTINGS_ENABLE_AC3 && eeprom.user.audio_settings & XBOX_EEPROM_AUDIO_SETTINGS_ENABLE_DTS) ? "AC3 / DTS" :
+                (eeprom.user.audio_settings & XBOX_EEPROM_AUDIO_SETTINGS_ENABLE_AC3) ? "AC3" :
+                (eeprom.user.audio_settings & XBOX_EEPROM_AUDIO_SETTINGS_ENABLE_DTS) ? "DTS" : "None");
     // clang-format on
 
     push_line(line++, mac_address_generate, "MAC Address: %02x:%02x:%02x:%02x:%02x:%02x",
-              mac_address[0], mac_address[1], mac_address[2],
-              mac_address[3], mac_address[4], mac_address[5]);
+              eeprom.factory.mac_address[0], eeprom.factory.mac_address[1], eeprom.factory.mac_address[2],
+              eeprom.factory.mac_address[3], eeprom.factory.mac_address[4], eeprom.factory.mac_address[5]);
 
-    push_line(line++, increment_timezone_bios, "Time Zone Offset: %.1f hours", ((float)-time_zone_offset) / 60.0f);
+    push_line(line++, increment_timezone_bios, "Time Zone Offset: %.1f hours", ((float)-eeprom.user.timezone_bias) / 60.0f);
+
+    push_line(line++, generate_serial_number, "Serial Number: %12s", eeprom.factory.serial_number);
 
     menu.item_count = line;
 }

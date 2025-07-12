@@ -79,12 +79,16 @@ jobs:
           echo
           echo "==== LICENSE for UbuntuMono-Regular.ttf ===="
           cat assets/LICENSE_ubuntu_mono
+          echo
           echo "==== LICENSE for SHA1/RC4 functions ===="
-          cat lib/crypt/LICENSE
+          cat lib/xbox_eeprom/LICENSE
+          echo
           echo "==== LICENSE for json parser ===="
           cat lib/json/LICENSE
+          echo
           echo "==== LICENSE for mbedtls ===="
           cat lib/mbedtls/LICENSE
+          echo
         } > artifact/LICENSE
 
     - name: Upload artifact
