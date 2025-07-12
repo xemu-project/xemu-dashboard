@@ -103,11 +103,8 @@ FetchContent_MakeAvailable(llhttp)
 target_link_libraries(xemu-dashboard PUBLIC llhttp_static)
 
 # Bring in crpyto functions to support SHA1 and RC4
-add_library(xbox_crypt STATIC
-    lib/crypt/sha1.c
-    lib/crypt/rc4.c
-)
-target_link_libraries(xemu-dashboard PUBLIC xbox_crypt)
+add_subdirectory(lib/xbox_eeprom)
+target_link_libraries(xemu-dashboard PUBLIC xbox-eeprom)
 
 # Bring in JSON parser support
 add_library(json STATIC
