@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <windows.h>
+#include <xbox_eeprom.h>
 #include <xboxkrnl/xboxkrnl.h>
 
 #include "main.h"
@@ -121,7 +122,7 @@ static void update_system_info(void)
     ULONG type;
     ExQueryNonVolatileSetting(XC_FACTORY_SERIAL_NUMBER, &type, &serial_number, sizeof(serial_number), NULL);
     ExQueryNonVolatileSetting(XC_FACTORY_ETHERNET_ADDR, &type, &mac_address, sizeof(mac_address), NULL);
-    push_line(line++, callback_stub, "MAC Address: %02x:%02x:%02x:%02x:%02x:%02x", 
+    push_line(line++, callback_stub, "MAC Address: %02x:%02x:%02x:%02x:%02x:%02x",
               mac_address[0], mac_address[1], mac_address[2],
               mac_address[3], mac_address[4], mac_address[5]);
     push_line(line++, callback_stub, "Serial Number: %s", serial_number);
@@ -171,16 +172,16 @@ static void update_system_info(void)
     ExQueryNonVolatileSetting(XC_FACTORY_GAME_REGION, &type, &game_region, sizeof(game_region), NULL);
     const char *game_region_string;
     switch (game_region) {
-        case GAME_REGION_NA:
+        case XBOX_EEPROM_XBOX_REGION_NA:
             game_region_string = "North America";
             break;
-        case GAME_REGION_JAPAN:
+        case XBOX_EEPROM_XBOX_REGION_JP:
             game_region_string = "Japan";
             break;
-        case GAME_REGION_EUROPE:
+        case XBOX_EEPROM_XBOX_REGION_EU:
             game_region_string = "Europe and Australia";
             break;
-        case GAME_REGION_MANUFACTURING:
+        case XBOX_EEPROM_XBOX_REGION_MANUFACTURING:
             game_region_string = "Manufacturing";
             break;
         default:
