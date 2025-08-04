@@ -21,9 +21,9 @@ if(CMAKE_BUILD_TYPE STREQUAL "Debug")
   set(NXDK_DEBUG_FLAG "y" CACHE STRING "Enable debug build for the NXDK submodule. 'y' or 'n'.")
 endif()
 
-set(CMAKE_ASM_FLAGS_DEBUG "${CMAKE_ASM_FLAGS_DEBUG} -g -gdwarf-4")
-set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -g -gdwarf-4")
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g -gdwarf-4")
+set(CMAKE_ASM_FLAGS_DEBUG "${CMAKE_ASM_FLAGS_DEBUG} -g -gdwarf-4 -Wall -Wextra")
+set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -g -gdwarf-4 -Wall -Wextra")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g -gdwarf-4 -Wall -Wextra")
 set(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUG} -debug")
 
 set(CMAKE_ASM_FLAGS_RELEASE "${CMAKE_ASM_FLAGS_RELEASE} -O2")
@@ -47,8 +47,6 @@ add_executable(xemu-dashboard
     support_updater.c lib/mbedtls/glue.c
     lib/ftpd/ftp_file.c lib/ftpd/ftp_server.c lib/ftpd/ftp.c
 )
-
-target_compile_options(xemu-dashboard PRIVATE -Wall -Wextra)
 
 target_include_directories(xemu-dashboard PRIVATE lib)
 
@@ -100,6 +98,9 @@ FetchContent_Declare(llhttp
 set(BUILD_SHARED_LIBS OFF CACHE INTERNAL "")
 set(BUILD_STATIC_LIBS ON CACHE INTERNAL "")
 FetchContent_MakeAvailable(llhttp)
+target_compile_options(llhttp_static PRIVATE
+    $<$<C_COMPILER_ID:GNU,Clang>:-w>
+  )
 target_link_libraries(xemu-dashboard PUBLIC llhttp_static)
 
 # Bring in crpyto functions to support SHA1 and RC4
