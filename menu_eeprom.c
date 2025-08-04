@@ -15,7 +15,7 @@ static int dirty = 0;
 static int closing = 0;
 static char eeprom_version;
 
-#define EEPROM_SMBUS_ADDRESS 0xA8
+#define EEPROM_SMBUS_ADDRESS     0xA8
 #define AUDIO_FLAG_ENCODING_MASK (XBOX_EEPROM_AUDIO_SETTINGS_ENABLE_AC3 | XBOX_EEPROM_AUDIO_SETTINGS_ENABLE_DTS)
 #define AUDIO_FLAG_CHANNEL_MASK  (XBOX_EEPROM_AUDIO_SETTINGS_MONO | XBOX_EEPROM_AUDIO_SETTINGS_SURROUND)
 
@@ -80,7 +80,6 @@ static void apply_settings(void)
     query_eeprom();
     update_eeprom_text();
 }
-
 
 static void cancel(void)
 {
@@ -318,11 +317,25 @@ static void update_eeprom_text(void)
 
     push_line(line++, (dirty) ? apply_settings : NULL, "Apply unsaved changes");
 
-    DWORD fileAttr = GetFileAttributesA("E:\\eeprom.bin");
-    const BOOL eeprom_backup_exists = (fileAttr != INVALID_FILE_ATTRIBUTES && !(fileAttr & FILE_ATTRIBUTE_DIRECTORY));
-    push_line(line++, (eeprom_backup_exists) ? restore_backup : NULL, "Restore EEPROM Backup");
+    // Read the EEPROM backup if it exists and get its creation time
+    SYSTEMTIME systemTime;
+    BOOL eeprom_backup_exists = FALSE;
+    HANDLE eeprom_file = CreateFileA("E:\\eeprom.bin", GENERIC_READ, 0, NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+    if (eeprom_file != INVALID_HANDLE_VALUE) {
+        FILETIME creationTime;
+        FILETIME creationTimeLocal;
+        GetFileTime(eeprom_file, &creationTime, NULL, NULL);
+        CloseHandle(eeprom_file);
+        FileTimeToLocalFileTime(&creationTime, &creationTimeLocal);
+        FileTimeToSystemTime(&creationTimeLocal, &systemTime);
+        eeprom_backup_exists = TRUE;
+    }
 
-    push_line(line++, NULL, "");
+    if (eeprom_backup_exists) {
+        push_line(line++, restore_backup, "Restore backup \nfrom E:\\eeprom.bin (Created %04d/%02d/%02d %02d:%02d:%02d)",
+                  systemTime.wYear, systemTime.wMonth, systemTime.wDay, systemTime.wHour, systemTime.wMinute, systemTime.wSecond);
+        push_line(line++, NULL, "");
+    }
 
     // clang-format off
     const char *eeprom_version_str = "Unknown";
