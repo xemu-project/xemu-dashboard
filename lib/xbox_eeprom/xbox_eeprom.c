@@ -88,7 +88,6 @@ static int do_eeprom_sha1_loop(const uint8_t hardware_revision, const void *data
 int xbox_eeprom_decrypt(const xbox_eeprom_t *encrypted_eeprom, xbox_eeprom_t *decrypted_eeprom)
 {
     RC4Context rc4_context;
-    SHA1Context sha1_context;
 
     if (encrypted_eeprom == NULL || decrypted_eeprom == NULL) {
         return -1; // Invalid arguments
@@ -100,14 +99,14 @@ int xbox_eeprom_decrypt(const xbox_eeprom_t *encrypted_eeprom, xbox_eeprom_t *de
     // We don't know what revision the EEPROM is yet, so we have to try all of them until one works.
     const uint8_t hardware_revision[] = {0x09, 0x0A, 0x0B, 0x0C};
 
-    for (int i = 0; i < sizeof(hardware_revision) / sizeof(hardware_revision[0]); i++) {
+    for (size_t i = 0; i < sizeof(hardware_revision) / sizeof(hardware_revision[0]); i++) {
 
         // Determine the decryption key
         uint8_t decryption_key[20];
         do_eeprom_sha1_loop(hardware_revision[i], &encrypted_eeprom->encrypted.sha1_hash,
                             sizeof(encrypted_eeprom->encrypted.sha1_hash), decryption_key);
 
-        // Initialise a RC4 content using the decryption key
+        // Initialise a RC4 context using the decryption key
         rc4_init(&rc4_context, decryption_key, sizeof(decryption_key));
 
         // Decrypt the encrypted EEPROM section which does not include the SHA1 hash

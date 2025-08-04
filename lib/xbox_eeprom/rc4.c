@@ -40,7 +40,7 @@ void rc4_init(RC4Context *ctx, uint8_t *data, size_t len)
 
 void rc4_crypt(RC4Context *ctx, uint8_t *data, size_t len)
 {
-    for (int i = 0, j = 0, k = 0; k < len; k++) {
+    for (size_t i = 0, j = 0, k = 0; k < len; k++) {
         i = (i + 1) % 256;
         j = (j + ctx->s[i]) % 256;
         rc4_swap(ctx, i, j);
