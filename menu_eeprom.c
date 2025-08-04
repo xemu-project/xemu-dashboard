@@ -12,6 +12,7 @@ static char char_pool[MAX_CHARACTERS];
 static int pool_offset;
 
 static int dirty = 0;
+static int closing = 0;
 static char eeprom_version;
 
 #define EEPROM_SMBUS_ADDRESS 0xA8
@@ -71,8 +72,39 @@ static void apply_settings(void)
     }
 
     dirty = 0;
+
+    if (closing) {
+        menu_pop();
+        closing = 0;
+    }
     query_eeprom();
     update_eeprom_text();
+}
+
+
+static void cancel(void)
+{
+    closing = 0;
+    menu_pop();
+}
+
+static void eeprom_menu_close_callback(void)
+{
+    if (dirty) {
+        static MenuItem menu_items[] = {
+            {"Do you wish to apply unsaved EEPROM changes?", NULL},
+            {"Yes", apply_settings},
+            {"No", cancel},
+        };
+        static Menu menu = {
+            .item = menu_items,
+            .item_count = 3,
+            .selected_index = 0,
+            .scroll_offset = 0,
+            .close_callback = NULL};
+        menu_push(&menu);
+        closing = 1;
+    }
 }
 
 static void increment_xbox_region(void)
@@ -247,7 +279,7 @@ static Menu menu = {
     .item = menu_items,
     .item_count = sizeof(menu_items) / sizeof(MenuItem),
     .selected_index = 0,
-    .close_callback = NULL};
+    .close_callback = eeprom_menu_close_callback};
 
 static void query_eeprom(void)
 {
