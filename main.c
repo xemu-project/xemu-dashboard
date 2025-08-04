@@ -3,10 +3,10 @@
  */
 
 #include <SDL.h>
+#include <hal/debug.h>
 #include <hal/video.h>
 #include <hal/xbox.h>
 #include <nxdk/mount.h>
-#include <hal/debug.h>
 #include <nxdk/path.h>
 #include <stdbool.h>
 #include <stdio.h>
@@ -34,6 +34,9 @@
 #define NANOPRINTF_SNPRINTF_SAFE_EMPTY_STRING_ON_OVERFLOW
 #include <nanoprintf/nanoprintf.h>
 
+#define STB_RECT_PACK_IMPLEMENTATION
+#include <stb/stb_rect_pack.h>
+
 #define STB_TRUETYPE_IMPLEMENTATION
 #include <stb/stb_truetype.h>
 
@@ -53,11 +56,8 @@ static const xgu_texture_tint_t text_color = {255, 255, 255, 255};
 static const xgu_texture_tint_t header_color = {100, 100, 100, 255};
 static const xgu_texture_tint_t info_color = {128, 128, 128, 255};
 
-static unsigned char *font_texture_bitmap;
-static xgu_texture_t *body_text;
-static stbtt_bakedchar body_text_cdata[96];
-static xgu_texture_t *header_text;
-static stbtt_bakedchar header_text_cdata[96];
+static Font body_font;
+static Font header_font;
 
 static SDL_GameController *controller = NULL;
 
@@ -91,6 +91,7 @@ static const unsigned char background_png[] = {
 
 int main(void)
 {
+    int result;
     XVideoSetMode(WINDOW_WIDTH, WINDOW_HEIGHT, 32, REFRESH_DEFAULT);
 
     nxUnmountDrive('D');
@@ -121,21 +122,12 @@ int main(void)
     srand(seed.LowPart);
 
     // Create font texture for body text
-    int final_height = 0;
-    font_texture_bitmap = malloc(FONT_BITMAP_WIDTH * FONT_BITMAP_HEIGHT);
-    final_height = stbtt_BakeFontBitmap(RobotoMono_Regular, 0, BODY_FONT_SIZE, font_texture_bitmap,
-                                        FONT_BITMAP_WIDTH, FONT_BITMAP_HEIGHT, 32, 96, body_text_cdata);
-    assert(final_height > 0);
-    body_text = texture_create(font_texture_bitmap, FONT_BITMAP_WIDTH, final_height, XGU_TEXTURE_FORMAT_A8);
-    assert(body_text);
+    result = text_create(RobotoMono_Regular, BODY_FONT_SIZE, (const int[][2]){{32, 127}}, 1, &body_font);
+    assert(result == 0);
 
     // Create font texture for header text
-    final_height = stbtt_BakeFontBitmap(UbuntuMono_Regular, 0, HEADER_FONT_SIZE, font_texture_bitmap,
-                                        FONT_BITMAP_WIDTH, FONT_BITMAP_HEIGHT, 32, 96, header_text_cdata);
-    assert(final_height > 0);
-    header_text = texture_create(font_texture_bitmap, FONT_BITMAP_WIDTH, final_height, XGU_TEXTURE_FORMAT_A8);
-    assert(header_text);
-    free(font_texture_bitmap);
+    result = text_create(UbuntuMono_Regular, HEADER_FONT_SIZE, (const int[][2]){{32, 127}}, 1, &header_font);
+    assert(result == 0);
 
     // Create background texture
     int width, height, channels;
@@ -257,7 +249,7 @@ int main(void)
         renderer_draw_textured_rectangle(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT, background_texture, NULL, &boundary);
 
         // Render the header text
-        text_draw(header_text_cdata, header_text, "xemu", X_MARGIN, HEADER_Y, &highlight_color);
+        text_draw(&header_font, "xemu", X_MARGIN, HEADER_Y, &highlight_color);
 
         char menu_text_buffer[64];
 
@@ -266,23 +258,23 @@ int main(void)
         GetLocalTime(&systemtime);
         snprintf(menu_text_buffer, sizeof(menu_text_buffer), "%04d-%02d-%02d %02d:%02d:%02d", systemtime.wYear, systemtime.wMonth, systemtime.wDay,
                  systemtime.wHour, systemtime.wMinute, systemtime.wSecond);
-        text_draw(body_text_cdata, body_text, menu_text_buffer, WINDOW_WIDTH - X_MARGIN - text_calculate_width(body_text_cdata, menu_text_buffer),
+        text_draw(&body_font, menu_text_buffer, WINDOW_WIDTH - X_MARGIN - text_calculate_width(&body_font, menu_text_buffer),
                   Y_MARGIN + BODY_FONT_SIZE + BODY_FONT_SIZE, &info_color);
 
         // Render footer text
         snprintf(menu_text_buffer, sizeof(menu_text_buffer), "Waiting for a Xbox DVD");
-        text_draw(body_text_cdata, body_text, menu_text_buffer, WINDOW_WIDTH - X_MARGIN - text_calculate_width(body_text_cdata, menu_text_buffer),
+        text_draw(&body_font, menu_text_buffer, WINDOW_WIDTH - X_MARGIN - text_calculate_width(&body_font, menu_text_buffer),
                   FOOTER_Y, &text_color);
 
         char network_status[32];
         network_get_status(network_status, sizeof(network_status));
         snprintf(menu_text_buffer, sizeof(menu_text_buffer), "FTP Server - %s", network_status);
-        text_draw(body_text_cdata, body_text, menu_text_buffer, WINDOW_WIDTH - X_MARGIN - text_calculate_width(body_text_cdata, menu_text_buffer),
+        text_draw(&body_font, menu_text_buffer, WINDOW_WIDTH - X_MARGIN - text_calculate_width(&body_font, menu_text_buffer),
                   FOOTER_Y + BODY_FONT_SIZE, &text_color);
 
         // Render the build version
         snprintf(menu_text_buffer, sizeof(menu_text_buffer), "%s", GIT_VERSION);
-        text_draw(body_text_cdata, body_text, menu_text_buffer, WINDOW_WIDTH - X_MARGIN - text_calculate_width(body_text_cdata, menu_text_buffer),
+        text_draw(&body_font, menu_text_buffer, WINDOW_WIDTH - X_MARGIN - text_calculate_width(&body_font, menu_text_buffer),
                   Y_MARGIN + BODY_FONT_SIZE, &info_color);
 
         // Render the actual menu items
@@ -326,23 +318,20 @@ Menu *menu_peak(void)
 
 static void render_menu(void)
 {
-    const stbtt_bakedchar *datum = &body_text_cdata['(' - 32];
-    const int item_height = (const int)(datum->y1 - datum->y0) + ITEM_PADDING;
-
     Menu *current_menu = menu_peak();
     assert(current_menu != NULL);
 
     // The first line of each menu is reserved for the menu title
-    text_draw(body_text_cdata, body_text, current_menu->item[0].label, X_MARGIN, MENU_Y, &header_color);
+    text_draw(&body_font, current_menu->item[0].label, X_MARGIN, MENU_Y, &header_color);
 
     renderer_set_scissor(0, MENU_Y + ITEM_PADDING, WINDOW_WIDTH, FOOTER_Y - (int)BODY_FONT_SIZE - MENU_Y);
 
-    const int selected_y_bottom = MENU_Y + current_menu->selected_index * item_height +
+    const int selected_y_bottom = MENU_Y + current_menu->selected_index * (int)body_font.line_height +
                                   current_menu->scroll_offset + ITEM_PADDING;
-    const int selected_y_top = selected_y_bottom - item_height;
+    const int selected_y_top = selected_y_bottom - (int)body_font.line_height;
 
     // Start at the bottom of the first menu item
-    int y = MENU_Y + item_height;
+    int y = MENU_Y + (int)body_font.line_height;
 
     // Scroll the selected item to be in view
     if (selected_y_top < MENU_Y + ITEM_PADDING) {
@@ -362,10 +351,10 @@ static void render_menu(void)
         }
 
         WaitForSingleObject(text_render_mutex, INFINITE);
-        text_draw(body_text_cdata, body_text, current_menu->item[i].label, X_MARGIN,
+        text_draw(&body_font, current_menu->item[i].label, X_MARGIN,
                   y + current_menu->scroll_offset, &color);
         ReleaseMutex(text_render_mutex);
-        y += item_height;
+        y += body_font.line_height;
     }
 
     renderer_set_scissor(0, 0, WINDOW_WIDTH, WINDOW_HEIGHT);
@@ -378,11 +367,11 @@ static void cleanup(void)
     if (controller) {
         SDL_GameControllerClose(controller);
     }
-    if (body_text) {
-        texture_destroy(body_text);
+    if (body_font.texture) {
+        texture_destroy(body_font.texture);
     }
-    if (header_text) {
-        texture_destroy(header_text);
+    if (header_font.texture) {
+        texture_destroy(header_font.texture);
     }
     if (background_texture) {
         texture_destroy(background_texture);
