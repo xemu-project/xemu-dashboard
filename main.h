@@ -77,6 +77,8 @@ int downloader_check_update(char latest_version[64 + 1], char latest_sha[64 + 1]
 int downloader_download_update(char *download_url, void **mem, char **downloaded_data, int *downloaded_size, char downloaded_sha[64 + 1]);
 
 void autolaunch_dvd_runner(void);
+const char *dvd_get_tray_status();
+
 void main_menu_activate(void);
 
 int text_create(const unsigned char *ttf_data, float font_size, const int(*range)[2], int range_count, Font *font);
