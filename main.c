@@ -263,7 +263,7 @@ int main(void)
         snprintf(menu_text_buffer, sizeof(menu_text_buffer), "%04d-%02d-%02d %02d:%02d:%02d", systemtime.wYear, systemtime.wMonth, systemtime.wDay,
                  systemtime.wHour, systemtime.wMinute, systemtime.wSecond);
         text_draw(&body_font, menu_text_buffer, WINDOW_WIDTH - X_MARGIN - text_calculate_width(&body_font, menu_text_buffer),
-                  Y_MARGIN + BODY_FONT_SIZE + BODY_FONT_SIZE, &info_color);
+                  Y_MARGIN + BODY_FONT_SIZE, &info_color);
 
         // Render footer text
         snprintf(menu_text_buffer, sizeof(menu_text_buffer), "Waiting for a Xbox DVD");
@@ -275,11 +275,6 @@ int main(void)
         snprintf(menu_text_buffer, sizeof(menu_text_buffer), "FTP Server - %s", network_status);
         text_draw(&body_font, menu_text_buffer, WINDOW_WIDTH - X_MARGIN - text_calculate_width(&body_font, menu_text_buffer),
                   FOOTER_Y + BODY_FONT_SIZE, &text_color);
-
-        // Render the build version
-        snprintf(menu_text_buffer, sizeof(menu_text_buffer), "%s", GIT_VERSION);
-        text_draw(&body_font, menu_text_buffer, WINDOW_WIDTH - X_MARGIN - text_calculate_width(&body_font, menu_text_buffer),
-                  Y_MARGIN + BODY_FONT_SIZE, &info_color);
 
         // Render the actual menu items
         render_menu();
