@@ -1,5 +1,6 @@
 #include <stdlib.h>
 #include <windows.h>
+#include <hal/video.h>
 
 #include "support_renderer.h"
 
@@ -69,7 +70,13 @@ void renderer_deinit(void)
 
 void renderer_initialise(void)
 {
-    pb_init();
+    while (pb_init() < 0) {
+        DbgPrint("[nxdk renderer] pbkit initialization failed, retrying...\n");
+        Sleep(10);
+    }
+    // pbkit can disable video output in some cases, re-enable it
+    XVideoSetVideoEnable(true);
+
     pb_show_front_screen();
 
     const float m_identity[4 * 4] = {
@@ -162,7 +169,7 @@ void renderer_draw_rectangle(int x, int y, int width, int height, const xgu_text
 void renderer_draw_textured_rectangle(int x, int y, int width, int height, const xgu_texture_t *texture, const xgu_texture_tint_t *tint, const xgu_texture_boundary_t *boundary)
 {
     p = pb_begin();
-    
+
     if (texture_combiner_active == 0) {
         texture_shader_apply();
         texture_combiner_active = 1;
