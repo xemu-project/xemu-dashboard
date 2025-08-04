@@ -40,7 +40,7 @@ add_executable(xemu-dashboard
     menu_system_info.c
     menu_eeprom.c
     menu_install_dash.c
-    support_dvd_autolaunch.c
+    support_dvd.c
     support_network.c
     support_text.c
     support_renderer.c
