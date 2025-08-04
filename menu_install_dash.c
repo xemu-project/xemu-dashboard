@@ -8,7 +8,7 @@
 static void install_dashboard_from_online(void);
 static void install_dashboard_from_local(void);
 
-static void restore_backuo(void)
+static void restore_backup(void)
 {
     static MenuItem status_message_items[] = {
         {"Backup restored successfully", NULL},
@@ -40,14 +40,15 @@ static void cancel(void)
 }
 
 // These text fields dynamically change so we use a separate variable for them
-static char *default_offline_install_text = "Install running file? (default.xbe)";
+static char *default_offline_install_text = "Install running file?";
 static char *default_online_install_text = "Check online for latest file?";
-#define OFFLINE_INSTALL_LINE 2
-#define ONLINE_INSTALL_LINE  3
+#define OFFLINE_INSTALL_LINE 3
+#define ONLINE_INSTALL_LINE  4
 
 static MenuItem menu_items[] = {
     {"Dashboard Installer (This will replace xboxdash.xbe)", NULL},
-    {"Restore backup", restore_backuo},
+    {"Running version: " GIT_VERSION, NULL},
+    {"Restore backup", restore_backup},
     {"Install running file?", install_dashboard_from_local},
     {"Check online for latest file?", install_dashboard_from_online},
     {"Cancel", cancel}};
