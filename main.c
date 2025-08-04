@@ -220,11 +220,11 @@ int main(void)
                             break;
                         }
                     }
-                } else if (e.cbutton.button == SDL_CONTROLLER_BUTTON_A) {
+                } else if (e.cbutton.button == SDL_CONTROLLER_BUTTON_A || e.cbutton.button == SDL_CONTROLLER_BUTTON_START) {
                     if (current_menu->item[current_menu->selected_index].callback) {
                         current_menu->item[current_menu->selected_index].callback();
                     }
-                } else if (e.cbutton.button == SDL_CONTROLLER_BUTTON_B) {
+                } else if (e.cbutton.button == SDL_CONTROLLER_BUTTON_B || e.cbutton.button == SDL_CONTROLLER_BUTTON_BACK) {
                     if (menu_stack_top > 0) {
                         menu_pop();
                     }
