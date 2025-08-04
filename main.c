@@ -147,7 +147,7 @@ int main(void)
 
     // If storage space is below some % on any partition, show a warning
     char warning_text[128];
-    const char *drive_letters[] = {"C:\\", "E:\\", "F:\\", "G:\\", "X:\\", "Y:\\", "Z:\\"};
+    const char *drive_letters[] = {"C:\\", "E:\\", "F:\\", "G:\\"};
     Menu menu_warning = {
         .item = (MenuItem *)&(MenuItem){warning_text, NULL},
         .item_count = 1,
