@@ -1,17 +1,10 @@
-cmake_minimum_required(VERSION 3.14)
+cmake_minimum_required(VERSION 3.5)
 set(XBE_TITLE xemu-dashboard)
 set(XBOX_ISO_DIR ${CMAKE_CURRENT_BINARY_DIR}/xiso)
+
 set(CMAKE_C_STANDARD 23)
 set(CMAKE_C_STANDARD_REQUIRED ON)
-
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
-include(PrebuildNXDK)
-
-project(xemu-dashboard C CXX ASM)
-
-include(FetchContent)
-include(FetchContent)
-include(FindPkgConfig)
 
 if(NOT CMAKE_BUILD_TYPE)
   set(CMAKE_BUILD_TYPE Release)
@@ -20,6 +13,13 @@ endif()
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
   set(NXDK_DEBUG_FLAG "y" CACHE STRING "Enable debug build for the NXDK submodule. 'y' or 'n'.")
 endif()
+
+project(xemu-dashboard C CXX ASM)
+
+include(FetchContent)
+include(FindPkgConfig)
+include(PostbuildAction)
+include(PrebuildNXDK)
 
 set(CMAKE_ASM_FLAGS_DEBUG "${CMAKE_ASM_FLAGS_DEBUG} -g -gdwarf-4 -Wall -Wextra")
 set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -g -gdwarf-4 -Wall -Wextra")
@@ -134,23 +134,4 @@ file(DOWNLOAD
 )
 
 #Post-build commands
-file(MAKE_DIRECTORY ${XBOX_ISO_DIR})
-
-#Post-build exe to xbe conversion
-add_custom_target(cxbe_convert ALL
-    COMMENT "CXBE Conversion: [EXE -> XBE]"
-    VERBATIM COMMAND "${CMAKE_COMMAND}" -E env ${NXDK_DIR}/tools/cxbe/cxbe -OUT:${CMAKE_CURRENT_BINARY_DIR}/default.xbe -TITLE:${XBE_TITLE} ${CMAKE_CURRENT_BINARY_DIR}/${XBE_TITLE}.exe > NUL 2>&1
-)
-add_dependencies(cxbe_convert xemu-dashboard)
-
-#Post-build xbe to xiso conversion
-add_custom_target(xbe_iso ALL
-    COMMENT "XISO Conversion: [XBE -> XISO]"
-    COMMAND ${CMAKE_COMMAND} -E copy "${CMAKE_CURRENT_BINARY_DIR}/default.xbe" "${XBOX_ISO_DIR}/default.xbe"
-    WORKING_DIRECTORY ${XBOX_ISO_DIR}
-    VERBATIM COMMAND "${CMAKE_COMMAND}" -E env ${NXDK_DIR}/tools/extract-xiso/build/extract-xiso -c ${XBOX_ISO_DIR} ${CMAKE_CURRENT_BINARY_DIR}/${XBE_TITLE}.iso
-)
-add_dependencies(xbe_iso cxbe_convert)
-
-set_target_properties(cxbe_convert PROPERTIES OUTPUT_QUIET ON)
-set_target_properties(xbe_iso PROPERTIES OUTPUT_QUIET ON)
+add_xbox_build_steps(xemu-dashboard ${XBE_TITLE} ${XBOX_ISO_DIR})
