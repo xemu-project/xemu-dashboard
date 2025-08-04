@@ -42,7 +42,7 @@ static void cancel(void)
 static char *default_offline_install_text = "Install running file? (default.xbe)";
 static char *default_online_install_text = "Check online for latest file?";
 #define OFFLINE_INSTALL_LINE 2
-#define ONLINE_INSTALL_LINE 3
+#define ONLINE_INSTALL_LINE  3
 
 static MenuItem menu_items[] = {
     {"Dashboard Installer (This will replace xboxdash.xbe)", NULL},
@@ -100,8 +100,13 @@ static DWORD WINAPI downloader_update_thread(LPVOID lpThreadParameter)
     downloader_init();
 
     if (downloader_check_update(latest_version, latest_sha, &download_url) == 0) {
-        // Update the menu item to show the latest version
+        // Check that the version is different from the current version
+        if (strcmp(latest_version, GIT_VERSION) == 0) {
+            update_downloader_status("You are already on the latest version", install_dashboard_from_online);
+            return 0;
+        }
 
+        // Update the menu item to show the latest version
         snprintf(status_text, sizeof(status_text), "Download update (%s)?", latest_version);
         update_downloader_status(status_text, trigger_online_action);
 
