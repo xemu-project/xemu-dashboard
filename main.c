@@ -266,7 +266,7 @@ int main(void)
                   Y_MARGIN + BODY_FONT_SIZE, &info_color);
 
         // Render footer text
-        snprintf(menu_text_buffer, sizeof(menu_text_buffer), "Waiting for a Xbox DVD");
+        snprintf(menu_text_buffer, sizeof(menu_text_buffer), "Tray State: %s", dvd_get_tray_status());
         text_draw(&body_font, menu_text_buffer, WINDOW_WIDTH - X_MARGIN - text_calculate_width(&body_font, menu_text_buffer),
                   FOOTER_Y, &text_color);
 
