@@ -282,15 +282,13 @@ static void update_eeprom_text(void)
 
     push_line(line++, NULL, "EEPROM Settings");
 
-    if (dirty) {
-        push_line(line++, apply_settings, "Apply unsaved changes");
-    } else {
-        push_line(line++, apply_settings, "Apply");
-    }
+    push_line(line++, (dirty) ? apply_settings : NULL, "Apply unsaved changes");
 
     DWORD fileAttr = GetFileAttributesA("E:\\eeprom.bin");
     const BOOL eeprom_backup_exists = (fileAttr != INVALID_FILE_ATTRIBUTES && !(fileAttr & FILE_ATTRIBUTE_DIRECTORY));
     push_line(line++, (eeprom_backup_exists) ? restore_backup : NULL, "Restore EEPROM Backup");
+
+    push_line(line++, NULL, "");
 
     // clang-format off
     const char *eeprom_version_str = "Unknown";
