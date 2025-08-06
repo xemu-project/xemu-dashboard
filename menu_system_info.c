@@ -28,7 +28,9 @@ static MenuItem menu_items[MAX_LINES];
 static Menu menu = {
     .item = menu_items,
     .item_count = sizeof(menu_items) / sizeof(MenuItem),
-    .selected_index = 0};
+    .selected_index = 0,
+    .scroll_offset = 0,
+    .close_callback = NULL};
 
 static void push_line(int line, void *callback, const char *format, ...)
 {

@@ -22,7 +22,9 @@ static MenuItem menu_items[] = {
 static Menu menu = {
     .item = menu_items,
     .item_count = sizeof(menu_items) / sizeof(MenuItem),
-    .selected_index = 0};
+    .selected_index = 0,
+    .scroll_offset = 0,
+    .close_callback = NULL};
 
 void main_menu_activate(void)
 {
@@ -103,7 +105,8 @@ static void xbox_flush_cache(void)
         .item = status_message_items,
         .item_count = sizeof(status_message_items) / sizeof(status_message_items),
         .selected_index = 0,
-        .scroll_offset = 0};
+        .scroll_offset = 0,
+        .close_callback = NULL};
 
     menu_push(&status_message);
 }

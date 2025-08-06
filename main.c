@@ -152,7 +152,8 @@ int main(void)
         .item = (MenuItem *)&(MenuItem){warning_text, NULL},
         .item_count = 1,
         .selected_index = 0,
-        .scroll_offset = 0};
+        .scroll_offset = 0,
+        .close_callback = NULL};
     int char_offset = 0;
     for (unsigned int i = 0; i < sizeof(drive_letters) / sizeof(drive_letters[0]); i++) {
         ULARGE_INTEGER total_bytes, free_bytes;
@@ -226,7 +227,10 @@ int main(void)
                     }
                 } else if (e.cbutton.button == SDL_CONTROLLER_BUTTON_B || e.cbutton.button == SDL_CONTROLLER_BUTTON_BACK) {
                     if (menu_stack_top > 0) {
-                        menu_pop();
+                        Menu *popped_menu = menu_pop();
+                        if (popped_menu->close_callback) {
+                            popped_menu->close_callback();
+                        }
                     }
                 }
             } else if (e.type == DVD_LAUNCH_EVENT) {
