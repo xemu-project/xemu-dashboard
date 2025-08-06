@@ -18,7 +18,8 @@ static void restore_backuo(void)
         .item = NULL,
         .item_count = 1,
         .selected_index = 0,
-        .scroll_offset = 0};
+        .scroll_offset = 0,
+        .close_callback = NULL};
 
     const char *src = "C:\\xboxdash.xbe.bak";
     const char *dst = "C:\\xboxdash.xbe";
@@ -55,7 +56,8 @@ static Menu menu = {
     .item = menu_items,
     .item_count = sizeof(menu_items) / sizeof(MenuItem),
     .selected_index = 0,
-    .scroll_offset = 0};
+    .scroll_offset = 0,
+    .close_callback = NULL};
 
 void menu_install_dash_activate(void)
 {

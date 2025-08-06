@@ -49,6 +49,7 @@ typedef struct
     int item_count;
     int selected_index;
     int scroll_offset;
+    void (*close_callback)(void);
 } Menu;
 
 typedef struct font
