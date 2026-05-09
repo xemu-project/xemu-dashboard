@@ -14,7 +14,7 @@ jobs:
         pip3 install pyfatx libqcow-python
 
     - name: Checkout Repository
-      uses: actions/checkout@v4
+      uses: actions/checkout@v6
       with:
         submodules: recursive
         fetch-depth: 0
@@ -92,14 +92,14 @@ jobs:
         } > artifact/LICENSE
 
     - name: Upload artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: xemu-dashboard
         path: artifact
 
     - name: Create GitHub Release
       if: github.event_name == 'push' && github.ref == 'refs/heads/master'
-      uses: softprops/action-gh-release@v2
+      uses: softprops/action-gh-release@v3
       with:
         tag_name: ${{ steps.release_tag.outputs.tag }}
         name: "Build ${{ steps.release_tag.outputs.tag }}"
