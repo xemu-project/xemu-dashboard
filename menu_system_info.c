@@ -9,6 +9,7 @@
 #define MAX_CHARACTERS 12024
 static char char_pool[MAX_CHARACTERS];
 static int pool_offset;
+static int show_used_space = 1;
 
 typedef struct _PCI_SLOT_NUMBER
 {
@@ -53,6 +54,14 @@ static void callback_stub(void)
 {
 }
 
+static void toggle_space_display(void)
+{
+    show_used_space = !show_used_space;
+    WaitForSingleObject(text_render_mutex, INFINITE);
+    update_system_info();
+    ReleaseMutex(text_render_mutex);
+}
+
 static void update_system_info(void)
 {
     int line = 0;
@@ -82,10 +91,19 @@ static void update_system_info(void)
         if (GetDiskFreeSpaceEx(drive_letters[i], &bytes_available, &total_bytes, NULL)) {
             ULONGLONG total_mib = total_bytes.QuadPart / 1024ULL;
             ULONGLONG mib_available = bytes_available.QuadPart / 1024ULL;
+            ULONGLONG mib_used = total_mib - mib_available;
             ULONGLONG percent_free = (mib_available * 100ULL) / total_mib;
-            push_line(line++, callback_stub, "    %c: %llu / %llu MiB (%llu%%)", drive_letters[i][0], mib_available, total_mib, percent_free);
+            ULONGLONG percent_used = 100 - percent_free;
+
+            if (show_used_space) {
+                push_line(line++, callback_stub, "    %c: %llu / %llu MiB (%llu%% used)", drive_letters[i][0], mib_used, total_mib, percent_used);
+            } else {
+                push_line(line++, callback_stub, "    %c: %llu / %llu MiB (%llu%% available)", drive_letters[i][0], mib_available, total_mib, percent_free);
+            }
         }
     }
+
+    push_line(line++, toggle_space_display, show_used_space ? "Press A to show Available Space" : "Press A to show Used Space");
 
     // Active encoder
     static const char *encoder_string = NULL;
