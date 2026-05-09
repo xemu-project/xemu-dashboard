@@ -54,6 +54,8 @@ static void callback_stub(void)
 {
 }
 
+static void update_system_info(void);
+
 static void toggle_space_display(void)
 {
     show_used_space = !show_used_space;
