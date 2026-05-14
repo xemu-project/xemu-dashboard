@@ -75,17 +75,17 @@ static void update_system_info(void)
     push_line(line++, callback_stub, "CPU Clock: %llu MHz, GPU Clock: %lu MHz\n", cpu_clock.QuadPart / 1000000, gpu_clock);
 
     // Free space on partitions
-    push_line(line++, callback_stub, "Free Space on Partitions:");
+    push_line(line++, callback_stub, "Disk Space Utilized on Partitions:");
     const char *drive_letters[] = {"C:\\", "E:\\", "F:\\", "G:\\", "X:\\", "Y:\\", "Z:\\"};
     for (unsigned int i = 0; i < sizeof(drive_letters) / sizeof(drive_letters[0]); i++) {
         ULARGE_INTEGER bytes_available, total_bytes;
-        if (GetDiskFreeSpaceEx(drive_letters[i], &bytes_available, &total_bytes, NULL)) {
-            ULONGLONG total_mib = total_bytes.QuadPart / 1024ULL;
-            ULONGLONG mib_available = bytes_available.QuadPart / 1024ULL;
-            ULONGLONG mib_used = total_mib - mib_available;
-            ULONGLONG percent_used = 100 - (mib_available * 100ULL) / total_mib;
-            push_line(line++, callback_stub, "    %c: %llu / %llu MiB (%llu%% used)", drive_letters[i][0], mib_used, total_mib, percent_used);
-        }
+    if (GetDiskFreeSpaceEx(drive_letters[i], &bytes_available, &total_bytes, NULL)) {
+        ULONGLONG total_mib = total_bytes.QuadPart / 1024ULL;
+        ULONGLONG mib_available = bytes_available.QuadPart / 1024ULL;
+        ULONGLONG mib_used = (mib_available <= total_mib) ? (total_mib - mib_available) : 0;
+        ULONGLONG percent_used = (total_mib > 0) ? (100 - (mib_available * 100ULL) / total_mib) : 100;
+        push_line(line++, callback_stub, "    %c: %llu / %llu MiB (%llu%% used)", drive_letters[i][0], mib_used, total_mib, percent_used);
+    }
     }
 
     // Active encoder
